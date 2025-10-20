@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum HouseStatus {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+enum TaskFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum TaskStatus {
+  PENDING // pendente
+  AWAITING_REVIEW // aguardando avaliação
+  COMPLETED // concluida
+  FAILED // falhou
+  REDO // refazer
+  BOUGHT_OUT // folga comprada
+}
+
+enum AccountType {
+  FIXED
+  FLOATING
+}
+
+enum HistoryEventType {
+  TASK_COMPLETED
+  TASK_FAILED
+  PUNISHMENT_APPLIED
+  SCORE_ADJUSTMENT
+  ACCOUNT_PAID
+}
+
+// 1. Core: Perfis, Casas e Usuários
+
+model Profile {
+  id      Int    @id @default(autoincrement())
+  name    String @unique @db.VarChar(50)
+  
+  users User[]
+
+  @@map("profiles")
+}
+
+model House {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(100)
+  code      String    @unique @db.VarChar(20)
+  
+  admin_id  Int
+  admin     User      @relation("AdminOfHouse", fields: [admin_id], references: [id], onDelete: Restrict)
+  
+  members   User[]    @relation("HouseMembers")
+  tasks     Task[]
+  accounts  Account[]
+  punishments Punishment[]
+  history   History[]
+
+  @@map("houses")
+}
+
+model User {
+  id            Int           @id @default(autoincrement())
+  name          String        @db.VarChar(100)
+  email         String        @unique @db.VarChar(100)
+  password_hash String        @db.Text
+  
+  profile_id    Int
+  profile       Profile       @relation(fields: [profile_id], references: [id])
+  
+  house_id      Int? 
+  house         House?        @relation("HouseMembers", fields: [house_id], references: [id], onDelete: SetNull)
+  house_status  HouseStatus   @default(PENDING)
+  
+  score         Int           @default(0)
+  star_avg      Decimal?      @db.Decimal(2, 1)
+  avatar_color  String?       @db.VarChar(50)
+  created_at    DateTime      @default(now())
+
+
+  house_admin   House[]       @relation("AdminOfHouse")
+  tasks_responsible Task[]    @relation("ResponsibleUser")
+  task_reviews  TaskReview[]
+  buyouts       Buyout[]
+  accounts_paid Account[]     @relation("PaidBy")
+  payment_shares PaymentShare[]
+  history       History[]
+
+  @@map("users")
+}
+
+
+model Task {
+  id            Int           @id @default(autoincrement())
+  house_id      Int
+  house         House         @relation(fields: [house_id], references: [id])
+  
+  title         String        @db.VarChar(150)
+  description   String?       @db.Text
+  frequency     TaskFrequency
+  points        Int
+  
+  responsible_id Int?        
+  responsible   User?         @relation("ResponsibleUser", fields: [responsible_id], references: [id], onDelete: SetNull)
+  
+  due_date      DateTime
+  status        TaskStatus    @default(PENDING)
+  can_buy_out   Boolean       @default(true) 
+  star_average  Decimal?      @db.Decimal(2, 1) 
+  
+  reviews       TaskReview[] 
+  buyouts       Buyout[]
+
+  @@map("tasks")
+}
+
+
+model TaskReview {
+  task_id       Int
+  reviewer_id   Int
+  stars         Int           @db.SmallInt
+  
+  task          Task          @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  reviewer      User          @relation(fields: [reviewer_id], references: [id], onDelete: Cascade)
+
+  @@id([task_id, reviewer_id]) 
+  @@map("task_reviews")
+}
+
+
+model Buyout {
+  user_id           Int
+  task_id           Int
+  cycle_start_date  DateTime  @db.Date
+  
+  user              User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  task              Task      @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@id([user_id, task_id, cycle_start_date])
+  @@map("buyouts")
+}
+
+
+model Punishment {
+  id              Int       @id @default(autoincrement())
+  house_id        Int
+  house           House     @relation(fields: [house_id], references: [id])
+  
+  description     String    @db.Text
+  penalty_points  Int
+  is_active       Boolean   @default(true)
+  
+  created_at      DateTime  @default(now())
+
+  @@map("punishments")
+}
+
+model History {
+  id              Int               @id @default(autoincrement())
+  house_id        Int
+  house           House             @relation(fields: [house_id], references: [id])
+  
+  user_id         Int?
+  user            User?             @relation(fields: [user_id], references: [id])
+  
+  event_type      HistoryEventType
+  description     String            @db.Text
+  created_at      DateTime          @default(now())
+
+  @@map("history")
+}
+
+
+model Account {
+  id              Int           @id @default(autoincrement())
+  house_id        Int
+  house           House         @relation(fields: [house_id], references: [id])
+  
+  name            String        @db.VarChar(150)
+  type            AccountType
+  amount          Decimal       @db.Decimal(10, 2)
+  due_date        DateTime      @db.Date
+  
+  paid_by_id      Int
+  paid_by         User          @relation("PaidBy", fields: [paid_by_id], references: [id])
+  
+  payment_shares  PaymentShare[]
+
+  @@map("accounts")
+}
+
+
+model PaymentShare {
+  account_id      Int
+  user_id         Int
+  
+  share_amount    Decimal       @db.Decimal(10, 2)
+  is_paid         Boolean       @default(false)
+  
+  account         Account       @relation(fields: [account_id], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([account_id, user_id])
+  @@map("payment_shares")
+}

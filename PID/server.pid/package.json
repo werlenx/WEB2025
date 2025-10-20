@@ -1,0 +1,23 @@
+{
+  "name": "server_side_pid",
+  "version": "0.0.0",
+  "description": "pagina de divulgação e informativo do projeto PID",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx watch ./src/server.ts",
+    "build": "tsc"
+  },
+  "author": "Werlen Araujo",
+  "license": "ISC",
+  "dependencies": {
+    "fastify": "^5.6.0",
+    "knex": "^3.1.0",
+    "sqlite3": "^5.1.7",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "typescript": "^5.9.2"
+  }
+}

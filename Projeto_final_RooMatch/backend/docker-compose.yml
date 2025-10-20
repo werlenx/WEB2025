@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  roomatch_db:
+    image: postgres:latest
+
+    container_name: roomatch_postgres
+
+    ports:
+      - "5432:5432"
+
+    restart: always
+
+    environment:
+      POSTGRES_DB: roomatch_bd
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+
+    volumes:
+      - roomatch_data:/var/lib/postgresql/data
+
+volumes:
+  roomatch_data:
