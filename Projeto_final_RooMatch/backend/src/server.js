@@ -8,12 +8,13 @@ import "dotenv/config";
 // --- NOVAS IMPORTAÇÕES DE MÓDULOS DE ROTAS ---
 import { authRoutes } from "./modules/auth/auth.route.js";
 import { houseRoutes } from "./modules/house/house.route.js";
+import { taskRoutes } from "./modules/task/task.route.js"; // <--- NOVO
 
 import prismaPlugin from "../plugins/prisma.js";
 
 async function startServer() {
   const fastify = Fastify({
-    logger: true, // logger útil para desenvolvimento
+    logger: true,
   });
 
   // --- 1. REGISTRO DE PLUGINS DE INFRAESTRUTURA ---
@@ -68,6 +69,9 @@ async function startServer() {
 
   // Rotas de Casa (Protegidas: /house, /house/join)
   await fastify.register(houseRoutes, { prefix: "/house" });
+
+  // Rotas de Tarefas (Protegidas: /tasks) <--- NOVO
+  await fastify.register(taskRoutes, { prefix: "/tasks" });
 
   // Rota de teste simples (MANTIDA)
   fastify.get("/", async (request, reply) => {
