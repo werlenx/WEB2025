@@ -7,7 +7,6 @@ export async function authRoutes(fastify) {
   // Rota de Registro (Cadastro de novo Usuário)
   fastify.post(
     "/register",
-    authController.registerHandler.bind(authController),
     {
       schema: {
         tags: ["Auth"],
@@ -34,44 +33,49 @@ export async function authRoutes(fastify) {
           409: { type: "object", properties: { message: { type: "string" } } },
         },
       },
-    }
+    },
+    authController.registerHandler.bind(authController)
   );
 
   // Rota de Login (Geração de JWT)
-  fastify.post("/login", authController.loginHandler.bind(authController), {
-    schema: {
-      tags: ["Auth"],
-      summary: "Autentica o usuário e retorna um JWT para rotas protegidas.",
-      body: {
-        type: "object",
-        required: ["email", "password"],
-        properties: {
-          email: { type: "string", format: "email" },
-          password: { type: "string" },
-        },
-      },
-      response: {
-        200: {
+  fastify.post(
+    "/login",
+    {
+      schema: {
+        tags: ["Auth"],
+        summary: "Autentica o usuário e retorna um JWT para rotas protegidas.",
+        body: {
           type: "object",
+          required: ["email", "password"],
           properties: {
-            token: { type: "string" },
-            user: {
-              type: "object",
-              properties: {
-                id: { type: "number" },
-                name: { type: "string" },
-                email: { type: "string" },
-                role: { type: "string", description: "ADMIN ou COMMON" },
-                houseId: { type: "number", nullable: true },
-                houseStatus: { type: "string" },
-                score: { type: "number" },
-                starAvg: { type: "string" },
+            email: { type: "string", format: "email" },
+            password: { type: "string" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              token: { type: "string" },
+              user: {
+                type: "object",
+                properties: {
+                  id: { type: "number" },
+                  name: { type: "string" },
+                  email: { type: "string" },
+                  role: { type: "string", description: "ADMIN ou COMMON" },
+                  houseId: { type: "number", nullable: true },
+                  houseStatus: { type: "string" },
+                  score: { type: "number" },
+                  starAvg: { type: "string" },
+                },
               },
             },
           },
+          401: { type: "object", properties: { message: { type: "string" } } },
         },
-        401: { type: "object", properties: { message: { type: "string" } } },
       },
     },
-  });
+    authController.loginHandler.bind(authController)
+  );
 }

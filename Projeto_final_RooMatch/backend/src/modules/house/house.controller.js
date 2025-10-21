@@ -1,94 +1,108 @@
-import bcrypt from "bcryptjs";
-import { AuthService } from "./auth.service.js";
+import { HouseService } from "./house.service.js";
+import { AuthService } from "../auth/auth.service.js";
 
-export class AuthController {
+export class HouseController {
   constructor(fastify) {
     this.fastify = fastify;
+    this.houseService = new HouseService(fastify.prisma);
     this.authService = new AuthService(fastify.prisma);
   }
 
-  // POST /auth/register
-  async registerHandler(request, reply) {
-    const { name, email, password } = request.body;
+  // POST /house/
+  async createHouseHandler(request, reply) {
+    const { houseName } = request.body || {};
+    const userId = request.user && (request.user.id || request.user.sub);
 
-    // 1. Validação de existência
-    const existingUser = await this.authService.findUserByEmail(email);
-    if (existingUser) {
-      reply.code(409).send({ message: "User already exists with this email." });
-      return;
+    if (!userId) {
+      return reply.code(401).send({ message: "Unauthorized" });
     }
 
-    // 2. Criação do Usuário (Service lida com hashing)
-    try {
-      const newUser = await this.authService.registerUser(
-        name,
-        email,
-        password
-      );
+    // Ensure user does not already belong to a house
+    const user = await this.fastify.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) return reply.code(404).send({ message: "User not found" });
+    if (user.house_id)
+      return reply
+        .code(400)
+        .send({ message: "User already belongs to a house" });
 
-      // 3. Resposta de Sucesso
-      reply.code(201).send({
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        message: "Registration successful. Awaiting house approval.",
-      });
+    try {
+      const newHouse = await this.houseService.createHouse(houseName, userId);
+      reply
+        .code(201)
+        .send({
+          id: newHouse.id,
+          name: newHouse.name,
+          code: newHouse.code,
+          message: "House created",
+        });
     } catch (error) {
       this.fastify.log.error(error);
-      reply
-        .code(500)
-        .send({ message: "Internal server error during registration." });
+      reply.code(500).send({ message: "Could not create house" });
     }
   }
 
-  // POST /auth/login
-  async loginHandler(request, reply) {
-    const { email, password } = request.body;
+  // POST /house/join
+  async joinHouseHandler(request, reply) {
+    const { houseCode, automaticApproval = false } = request.body || {};
+    const userId = request.user && (request.user.id || request.user.sub);
 
-    // 1. Busca o Usuário (o Service inclui o hash e o profile)
-    const user = await this.authService.findUserByEmail(email);
+    if (!userId) return reply.code(401).send({ message: "Unauthorized" });
 
-    if (!user) {
-      reply
-        .code(401)
-        .send({ message: "Invalid credentials or user not found." });
-      return;
+    try {
+      const house = await this.houseService.findHouseByCode(houseCode);
+      if (!house) return reply.code(404).send({ message: "House not found" });
+
+      const status = automaticApproval ? "APPROVED" : "PENDING";
+      const updatedUser = await this.houseService.joinHouse(
+        house.id,
+        userId,
+        status
+      );
+
+      reply.code(200).send({
+        house: { name: updatedUser.house.name, code: updatedUser.house.code },
+        houseStatus: updatedUser.house_status,
+        message: status === "APPROVED" ? "Joined house" : "Join request sent",
+      });
+    } catch (error) {
+      this.fastify.log.error(error);
+      reply.code(500).send({ message: "Could not join house" });
     }
+  }
 
-    // 2. Compara a senha (usando bcrypt)
-    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+  // GET /house/
+  async getHouseHandler(request, reply) {
+    const houseId =
+      request.user &&
+      (request.user.houseId || request.user.house_id || request.user.houseId);
+    if (!houseId) return reply.code(404).send({ message: "User has no house" });
 
-    if (!passwordMatch) {
-      reply
-        .code(401)
-        .send({ message: "Invalid credentials or user not found." });
-      return;
+    try {
+      const details = await this.houseService.getHouseDetails(houseId);
+      if (!details) return reply.code(404).send({ message: "House not found" });
+
+      // Normalize star_avg to string to keep consistency with other endpoints
+      if (details.members) {
+        details.members = details.members.map((m) => ({
+          ...m,
+          star_avg: m.star_avg ? m.star_avg.toString() : "0.0",
+          role: m.profile ? m.profile.name : undefined,
+        }));
+      }
+
+      reply.code(200).send({
+        id: details.id,
+        name: details.name,
+        code: details.code,
+        adminId: details.admin_id,
+        members: details.members || [],
+        pendingMembers: details.pending_members || [],
+      });
+    } catch (error) {
+      this.fastify.log.error(error);
+      reply.code(500).send({ message: "Could not retrieve house details" });
     }
-
-    // 3. Cria o payload do JWT (dados a serem armazenados no token)
-    const tokenPayload = {
-      id: user.id,
-      email: user.email,
-      role: user.profile.name,
-      houseId: user.house_id,
-    };
-
-    // 4. Gera o token
-    const token = this.fastify.jwt.sign(tokenPayload);
-
-    // 5. Resposta de Sucesso (inclui dados do usuário e token)
-    reply.code(200).send({
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.profile.name,
-        houseId: user.house_id,
-        houseStatus: user.house_status,
-        score: user.score,
-        starAvg: user.star_avg ? user.star_avg.toString() : "0.0",
-      },
-    });
   }
 }
