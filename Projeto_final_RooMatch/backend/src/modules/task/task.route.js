@@ -114,4 +114,106 @@ export async function taskRoutes(fastify) {
     },
     taskController.getTasksHandler.bind(taskController)
   );
+
+  fastify.patch(
+    "/:taskId/status",
+    {
+      schema: {
+        tags: ["Tasks"],
+        summary:
+          "Atualiza o status de uma tarefa. (Ex: PENDING -> AWAITING_REVIEW)",
+        security: [{ apiKey: [] }],
+        params: {
+          type: "object",
+          properties: {
+            taskId: {
+              type: "number",
+              description: "ID da tarefa a ser atualizada.",
+            },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["status"],
+          properties: {
+            status: {
+              type: "string",
+              enum: [
+                "PENDING",
+                "AWAITING_REVIEW",
+                "COMPLETED",
+                "FAILED",
+                "REDO",
+                "BOUGHT_OUT",
+              ],
+            },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              id: { type: "number" },
+              title: { type: "string" },
+              status: { type: "string" },
+              message: { type: "string" },
+            },
+          },
+          400: { type: "object", properties: { message: { type: "string" } } },
+          403: { type: "object", properties: { message: { type: "string" } } },
+          404: { type: "object", properties: { message: { type: "string" } } },
+        },
+      },
+    },
+    taskController.updateTaskStatusHandler.bind(taskController)
+  );
+
+  fastify.post(
+    "/:taskId/review",
+    {
+      schema: {
+        tags: ["Tasks"],
+        summary:
+          "Avalia a tarefa (1 a 5 estrelas), calcula a média e pontua o responsável.",
+        security: [{ apiKey: [] }],
+        params: {
+          type: "object",
+          properties: {
+            taskId: {
+              type: "number",
+              description: "ID da tarefa a ser avaliada.",
+            },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["stars"],
+          properties: {
+            stars: {
+              type: "number",
+              minimum: 1,
+              maximum: 5,
+              description: "Avaliação em estrelas (1 a 5).",
+            },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              id: { type: "number" },
+              title: { type: "string" },
+              status: { type: "string" },
+              starAverage: { type: "string", nullable: true },
+              message: { type: "string" },
+            },
+          },
+          400: { type: "object", properties: { message: { type: "string" } } },
+          403: { type: "object", properties: { message: { type: "string" } } },
+          404: { type: "object", properties: { message: { type: "string" } } },
+        },
+      },
+    },
+    taskController.reviewTaskHandler.bind(taskController)
+  );
 }

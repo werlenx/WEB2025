@@ -29,14 +29,12 @@ export class HouseController {
 
     try {
       const newHouse = await this.houseService.createHouse(houseName, userId);
-      reply
-        .code(201)
-        .send({
-          id: newHouse.id,
-          name: newHouse.name,
-          code: newHouse.code,
-          message: "House created",
-        });
+      reply.code(201).send({
+        id: newHouse.id,
+        name: newHouse.name,
+        code: newHouse.code,
+        message: "House created",
+      });
     } catch (error) {
       this.fastify.log.error(error);
       reply.code(500).send({ message: "Could not create house" });
@@ -73,6 +71,38 @@ export class HouseController {
   }
 
   // GET /house/
+  // async getHouseHandler(request, reply) {
+  //   const houseId =
+  //     request.user &&
+  //     (request.user.houseId || request.user.house_id || request.user.houseId);
+  //   if (!houseId) return reply.code(404).send({ message: "User has no house" });
+
+  //   try {
+  //     const details = await this.houseService.getHouseDetails(houseId);
+  //     if (!details) return reply.code(404).send({ message: "House not found" });
+
+  //     // Normalize star_avg to string to keep consistency with other endpoints
+  //     if (details.members) {
+  //       details.members = details.members.map((m) => ({
+  //         ...m,
+  //         star_avg: m.star_avg ? m.star_avg.toString() : "0.0",
+  //         role: m.profile ? m.profile.name : undefined,
+  //       }));
+  //     }
+
+  //     reply.code(200).send({
+  //       id: details.id,
+  //       name: details.name,
+  //       code: details.code,
+  //       adminId: details.admin_id,
+  //       members: details.members || [],
+  //       pendingMembers: details.pending_members || [],
+  //     });
+  //   } catch (error) {
+  //     this.fastify.log.error(error);
+  //     reply.code(500).send({ message: "Could not retrieve house details" });
+  //   }
+  // }
   async getHouseHandler(request, reply) {
     const houseId =
       request.user &&
@@ -83,7 +113,8 @@ export class HouseController {
       const details = await this.houseService.getHouseDetails(houseId);
       if (!details) return reply.code(404).send({ message: "House not found" });
 
-      // Normalize star_avg to string to keep consistency with other endpoints
+      const pendingMembers = await this.houseService.getPendingMembers(houseId);
+
       if (details.members) {
         details.members = details.members.map((m) => ({
           ...m,
@@ -98,7 +129,7 @@ export class HouseController {
         code: details.code,
         adminId: details.admin_id,
         members: details.members || [],
-        pendingMembers: details.pending_members || [],
+        pendingMembers: pendingMembers || [],
       });
     } catch (error) {
       this.fastify.log.error(error);

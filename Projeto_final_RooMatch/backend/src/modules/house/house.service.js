@@ -75,6 +75,29 @@ export class HouseService {
   }
 
   async getHouseDetails(houseId) {
+    // CORREÇÃO 1: Removemos a tentativa de usar 'pending_members' no 'include'.
+    return this.prisma.house.findUnique({
+      where: { id: houseId },
+      include: {
+        members: {
+          // Esta inclusão trará APENAS os APPROVED
+          where: { house_status: "APPROVED" },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            score: true,
+            star_avg: true,
+            avatar_color: true,
+            profile: { select: { name: true } },
+          },
+        },
+        // O restante das inclusões da House (admin, tasks, etc.) não precisa de alteração
+      },
+    });
+  }
+
+  async getHouseDetails(houseId) {
     return this.prisma.house.findUnique({
       where: { id: houseId },
       include: {
