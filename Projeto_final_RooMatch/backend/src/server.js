@@ -5,10 +5,10 @@ import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import "dotenv/config";
 
-// --- NOVAS IMPORTAÇÕES DE MÓDULOS DE ROTAS ---
 import { authRoutes } from "./modules/auth/auth.route.js";
 import { houseRoutes } from "./modules/house/house.route.js";
-import { taskRoutes } from "./modules/task/task.route.js"; // <--- NOVO
+import { taskRoutes } from "./modules/task/task.route.js";
+import { accountRoutes } from "./modules/accounts/account.route.js";
 
 import prismaPlugin from "../plugins/prisma.js";
 
@@ -30,11 +30,9 @@ async function startServer() {
     secret: process.env.JWT_SECRET || "fallback_secret_in_development_only",
   });
 
-  // NOVO: Adiciona um hook de autenticação globalmente (para rotas protegidas)
   fastify.decorate("authenticate", async function (request, reply) {
     try {
       await request.jwtVerify();
-      // O payload do JWT é injetado em request.user (útil para extrair id e houseId)
     } catch (err) {
       reply.send(err);
     }
@@ -62,18 +60,11 @@ async function startServer() {
     routePrefix: "/docs",
   });
 
-  // --- 2. REGISTRO DE ROTAS (MVC) ---
-
-  // Rotas de Autenticação (Públicas: /auth/login, /auth/register)
   await fastify.register(authRoutes, { prefix: "/auth" });
-
-  // Rotas de Casa (Protegidas: /house, /house/join)
   await fastify.register(houseRoutes, { prefix: "/house" });
-
-  // Rotas de Tarefas (Protegidas: /tasks) <--- NOVO
   await fastify.register(taskRoutes, { prefix: "/tasks" });
+  await fastify.register(accountRoutes, { prefix: "/accounts" });
 
-  // Rota de teste simples (MANTIDA)
   fastify.get("/", async (request, reply) => {
     return { status: "ok", message: "RooMatch API is running!" };
   });

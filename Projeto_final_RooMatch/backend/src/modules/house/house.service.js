@@ -98,10 +98,12 @@ export class HouseService {
   }
 
   async getHouseDetails(houseId) {
+    // CORRIGIDO: Retiramos 'pending_members' daqui
     return this.prisma.house.findUnique({
       where: { id: houseId },
       include: {
         members: {
+          // Trará APENAS os APPROVED
           where: { house_status: "APPROVED" },
           select: {
             id: true,
@@ -113,11 +115,60 @@ export class HouseService {
             profile: { select: { name: true } },
           },
         },
-        pending_members: {
-          where: { house_status: "PENDING" },
-          select: { id: true, name: true, email: true },
-        },
+        // 'pending_members' REMOVIDO DAQUI
       },
     });
+  }
+
+  async getPendingMembers(houseId) {
+    return this.prisma.user.findMany({
+      where: {
+        house_id: houseId,
+        house_status: "PENDING",
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    });
+  }
+
+  /**
+   * Atualiza o status de um membro (APPROVE, REJECT, PENDING) e garante que
+   * o usuário pertence à casa.
+   */
+  async updateMemberStatus(userId, houseId, newStatus) {
+    const validStatuses = ["APPROVED", "REJECTED", "PENDING"];
+
+    if (!validStatuses.includes(newStatus)) {
+      throw new Error("Invalid status provided.");
+    }
+
+    try {
+      return this.prisma.user.update({
+        where: {
+          id: userId,
+          house_id: houseId, // Garante que o alvo está na casa do admin
+        },
+        data: {
+          house_status: newStatus,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          house_status: true,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        throw new Error("User not found or not a member of your house.");
+      }
+      throw error;
+    }
   }
 }

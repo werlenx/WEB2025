@@ -136,4 +136,57 @@ export class HouseController {
       reply.code(500).send({ message: "Could not retrieve house details" });
     }
   }
+
+  // PATCH /house/members/:userId/status
+  async updateMemberStatusHandler(request, reply) {
+    const { userId } = request.params;
+    const { status } = request.body;
+
+    const adminId = request.user && request.user.id;
+    const houseId = request.user && request.user.houseId;
+    const userRole = request.user && request.user.role;
+
+    if (!houseId) {
+      return reply.code(400).send({ message: "User must belong to a house." });
+    }
+
+    // 1. Regra de Negócio: Somente o ADMIN da casa pode aprovar/rejeitar.
+    if (userRole !== "ADMIN") {
+      return reply
+        .code(403)
+        .send({ message: "Only the house administrator can manage members." });
+    }
+
+    // 2. Regra de Negócio: O Admin não pode mudar o próprio status.
+    if (parseInt(userId) === adminId) {
+      return reply
+        .code(400)
+        .send({ message: "You cannot change your own house status." });
+    }
+
+    try {
+      const updatedMember = await this.houseService.updateMemberStatus(
+        parseInt(userId),
+        houseId,
+        status
+      );
+
+      reply.code(200).send({
+        id: updatedMember.id,
+        name: updatedMember.name,
+        email: updatedMember.email,
+        houseStatus: updatedMember.house_status,
+        message: `Member status updated to ${updatedMember.house_status}.`,
+      });
+    } catch (error) {
+      this.fastify.log.error(error);
+      if (error.message.includes("User not found")) {
+        return reply.code(404).send({ message: error.message });
+      }
+      if (error.message.includes("Invalid status")) {
+        return reply.code(400).send({ message: error.message });
+      }
+      reply.code(500).send({ message: "Could not update member status." });
+    }
+  }
 }

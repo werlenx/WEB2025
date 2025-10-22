@@ -125,4 +125,50 @@ export async function houseRoutes(fastify) {
     },
     houseController.getHouseHandler.bind(houseController)
   );
+
+  // PATCH /house/members/:userId/status - Aprova/Rejeita membros.
+  fastify.patch(
+    "/members/:userId/status",
+    {
+      schema: {
+        tags: ["House"],
+        summary:
+          "Altera o status de um membro (Aprovar/Rejeitar). Requer ADMIN.",
+        security: [{ apiKey: [] }],
+        params: {
+          type: "object",
+          properties: {
+            userId: { type: "number", description: "ID do usuário alvo." },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["status"],
+          properties: {
+            status: {
+              type: "string",
+              enum: ["APPROVED", "REJECTED", "PENDING"],
+              description: "Novo status do membro na casa.",
+            },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              id: { type: "number" },
+              name: { type: "string" },
+              email: { type: "string" },
+              houseStatus: { type: "string" },
+              message: { type: "string" },
+            },
+          },
+          400: { type: "object", properties: { message: { type: "string" } } },
+          403: { type: "object", properties: { message: { type: "string" } } },
+          404: { type: "object", properties: { message: { type: "string" } } },
+        },
+      },
+    },
+    houseController.updateMemberStatusHandler.bind(houseController)
+  );
 }
