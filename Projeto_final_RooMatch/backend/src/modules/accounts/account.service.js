@@ -60,4 +60,27 @@ export class AccountService {
       return newAccount;
     });
   }
+
+  async getAccounts(houseId) {
+    // Retorna todas as contas da casa, incluindo quem pagou (paid_by)
+    // e a lista de partes a serem pagas (payment_shares), com detalhes do usuário devedor.
+    return this.prisma.account.findMany({
+      where: { house_id: houseId },
+      include: {
+        paid_by: {
+          select: { id: true, name: true, avatar_color: true },
+        },
+        payment_shares: {
+          include: {
+            user: {
+              select: { id: true, name: true, avatar_color: true },
+            },
+          },
+          orderBy: { user_id: "asc" },
+        },
+      },
+      // Mostra as mais recentes primeiro
+      orderBy: { due_date: "desc" },
+    });
+  }
 }

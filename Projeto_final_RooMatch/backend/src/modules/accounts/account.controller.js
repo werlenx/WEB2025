@@ -15,9 +15,9 @@ export class AccountController {
     const houseId = request.user && request.user.houseId;
 
     if (!houseId) {
-      return reply
-        .code(400)
-        .send({ message: "User must belong to a house to create an account." });
+      return reply.code(400).send({
+        message: "O usuário deve pertencer a uma casa para criar uma conta.",
+      });
     }
 
     try {
@@ -35,14 +35,50 @@ export class AccountController {
         name: newAccount.name,
         amount: newAccount.amount.toString(),
         dueDate: newAccount.due_date,
-        message: "Account created and shares calculated.",
+        message: "Conta criada e divisões de pagamento calculadas.",
       });
     } catch (error) {
       this.fastify.log.error(error);
-      if (error.message.includes("No approved members")) {
+      if (error.message.includes("Não há menbros aprovados na casa")) {
         return reply.code(400).send({ message: error.message });
       }
-      reply.code(500).send({ message: "Could not create account." });
+      reply.code(500).send({ message: "Não foi possivel criar conta." });
+    }
+  }
+
+  // GET /accounts/
+  async getAccountsHandler(request, reply) {
+    const houseId = request.user && request.user.houseId;
+
+    if (!houseId) {
+      return reply
+        .code(400)
+        .send({ message: "O usuário deve pertencer a uma casa." });
+    }
+
+    try {
+      const accounts = await this.accountService.getAccounts(houseId);
+
+      // Formata a resposta para garantir que valores Decimal sejam strings
+      const formattedAccounts = accounts.map((account) => ({
+        id: account.id,
+        name: account.name,
+        type: account.type,
+        amount: account.amount.toString(), // Decimal -> String
+        dueDate: account.due_date,
+        paidBy: account.paid_by,
+        paymentShares: account.payment_shares.map((share) => ({
+          userId: share.user_id,
+          shareAmount: share.share_amount.toString(), // Decimal -> String
+          isPaid: share.is_paid,
+          user: share.user,
+        })),
+      }));
+
+      reply.code(200).send(formattedAccounts);
+    } catch (error) {
+      this.fastify.log.error(error);
+      reply.code(500).send({ message: "Não foi possível buscar as contas." });
     }
   }
 }

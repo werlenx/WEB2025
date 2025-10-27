@@ -6,6 +6,49 @@ export async function accountRoutes(fastify) {
   // Hook para autenticação
   fastify.addHook("onRequest", fastify.authenticate);
 
+  const paymentShareSchema = {
+    type: "object",
+    properties: {
+      userId: { type: "number" },
+      shareAmount: {
+        type: "string",
+        description: "Valor da parte (em string para precisão).",
+      },
+      isPaid: { type: "boolean" },
+      user: {
+        type: "object",
+        properties: {
+          id: { type: "number" },
+          name: { type: "string" },
+          avatar_color: { type: "string", nullable: true },
+        },
+      },
+    },
+  };
+
+  const accountSchema = {
+    type: "object",
+    properties: {
+      id: { type: "number" },
+      name: { type: "string" },
+      type: { type: "string" },
+      amount: {
+        type: "string",
+        description: "Valor total (em string para precisão).",
+      },
+      dueDate: { type: "string", format: "date-time" },
+      paidBy: {
+        type: "object",
+        properties: {
+          id: { type: "number" },
+          name: { type: "string" },
+          avatar_color: { type: "string", nullable: true },
+        },
+      },
+      paymentShares: { type: "array", items: paymentShareSchema },
+    },
+  };
+
   // POST /accounts/ - Cria uma nova conta/despesa.
   fastify.post(
     "/",
@@ -50,5 +93,25 @@ export async function accountRoutes(fastify) {
       },
     },
     accountController.createAccountHandler.bind(accountController)
+  );
+
+  fastify.get(
+    "/",
+    {
+      schema: {
+        tags: ["Accounts"],
+        summary:
+          "Lista todas as contas (despesas) da casa, incluindo as partes individuais (PaymentShares).",
+        security: [{ apiKey: [] }],
+        response: {
+          200: {
+            type: "array",
+            items: accountSchema,
+          },
+          400: { type: "object", properties: { message: { type: "string" } } },
+        },
+      },
+    },
+    accountController.getAccountsHandler.bind(accountController)
   );
 }
