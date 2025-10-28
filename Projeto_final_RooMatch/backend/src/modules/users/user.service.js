@@ -41,14 +41,19 @@ export class UserService {
         role: user.profile.name,
       };
     } catch (error) {
-      // P2002: Unique constraint failed (ex: tentar usar email já cadastrado)
+      // Handle Prisma's unique constraint violation
       if (
-        error instanceof PrismaClientKnownRequestError &&
-        error.code === "P2002"
+        error?.name === "PrismaClientKnownRequestError" &&
+        error?.code === "P2002"
       ) {
-        throw new Error("Email already in use.");
+        const target = error?.meta?.target?.[0];
+        if (target === "email") {
+          const customError = new Error("Email already in use");
+          customError.code = "P2002";
+          throw customError;
+        }
       }
-      throw error;
+      throw error; // Re-throw other errors for controller to handle
     }
   }
 }
