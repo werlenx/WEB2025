@@ -1,0 +1,53 @@
+import { UserController } from "./user.controller.js";
+
+export async function userRoutes(fastify) {
+  const userController = new UserController(fastify);
+
+  // Hook para autenticação: todas as rotas deste arquivo requerem JWT.
+  fastify.addHook("onRequest", fastify.authenticate);
+
+  // PATCH /users/me - Atualiza o perfil do usuário logado
+  fastify.patch(
+    "/me",
+    {
+      schema: {
+        tags: ["Users"],
+        summary:
+          "Atualiza o perfil do usuário logado (nome, email, avatarColor).",
+        security: [{ apiKey: [] }],
+        body: {
+          type: "object",
+          properties: {
+            name: { type: "string", nullable: true },
+            email: { type: "string", format: "email", nullable: true },
+            avatarColor: { type: "string", nullable: true },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              user: {
+                type: "object",
+                properties: {
+                  id: { type: "number" },
+                  name: { type: "string" },
+                  email: { type: "string" },
+                  role: { type: "string" },
+                  houseId: { type: "number", nullable: true },
+                  houseStatus: { type: "string" },
+                  score: { type: "number" },
+                  starAvg: { type: "string" },
+                  avatarColor: { type: "string", nullable: true },
+                },
+              },
+              message: { type: "string" },
+            },
+          },
+          409: { type: "object", properties: { message: { type: "string" } } },
+        },
+      },
+    },
+    userController.updateProfileHandler.bind(userController)
+  );
+}

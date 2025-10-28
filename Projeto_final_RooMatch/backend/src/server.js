@@ -9,6 +9,7 @@ import { authRoutes } from "./modules/auth/auth.route.js";
 import { houseRoutes } from "./modules/house/house.route.js";
 import { taskRoutes } from "./modules/task/task.route.js";
 import { accountRoutes } from "./modules/accounts/account.route.js";
+import { userRoutes } from "./modules/users/user.route.js";
 
 import prismaPlugin from "../plugins/prisma.js";
 
@@ -64,6 +65,7 @@ async function startServer() {
   await fastify.register(houseRoutes, { prefix: "/house" });
   await fastify.register(taskRoutes, { prefix: "/tasks" });
   await fastify.register(accountRoutes, { prefix: "/accounts" });
+  await fastify.register(userRoutes, { prefix: "/users" });
 
   fastify.get("/", async (request, reply) => {
     return { status: "ok", message: "RooMatch API is running!" };
