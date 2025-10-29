@@ -81,4 +81,52 @@ export class AccountController {
       reply.code(500).send({ message: "Não foi possível buscar as contas." });
     }
   }
+
+  // PATCH /accounts/:accountId/pay
+  async markShareAsPaidHandler(request, reply) {
+    const { accountId } = request.params;
+    const userId = request.user && request.user.id;
+    const houseId = request.user && request.user.houseId;
+
+    if (!houseId) {
+      return reply.code(400).send({ message: "User must belong to a house." });
+    }
+
+    try {
+      const accountIdNum = parseInt(accountId);
+
+      // 1. Verificação: Garante que a conta existe e pertence a esta casa
+      const account = await this.fastify.prisma.account.findUnique({
+        where: { id: accountIdNum },
+      });
+
+      if (!account || account.house_id !== houseId) {
+        return reply
+          .code(404)
+          .send({ message: "Account not found in your house." });
+      }
+
+      // 2. Chama o Service para marcar como pago
+      const updatedShare = await this.accountService.markShareAsPaid(
+        accountIdNum,
+        userId
+      );
+
+      reply.code(200).send({
+        accountId: updatedShare.account_id,
+        shareAmount: updatedShare.share_amount.toString(),
+        isPaid: updatedShare.is_paid,
+        message: `Your share of ${updatedShare.account.name} has been marked as paid.`,
+      });
+    } catch (error) {
+      this.fastify.log.error(error);
+      if (error.message.includes("Payment share not found")) {
+        // P2025 é um erro comum, pode significar que a share já foi paga ou ID incorreto
+        return reply
+          .code(400)
+          .send({ message: "Share not found for this user or already paid." });
+      }
+      reply.code(500).send({ message: "Could not register payment." });
+    }
+  }
 }

@@ -189,4 +189,50 @@ export class HouseController {
       reply.code(500).send({ message: "Could not update member status." });
     }
   }
+
+  // DELETE /house/members/:userId
+  async removeMemberHandler(request, reply) {
+    const { userId } = request.params;
+
+    const adminId = request.user && request.user.id;
+    const houseId = request.user && request.user.houseId;
+    const userRole = request.user && request.user.role;
+
+    if (!houseId) {
+      return reply.code(400).send({ message: "User must belong to a house." });
+    }
+
+    // 1. Regra de Negócio: Somente o ADMIN pode remover.
+    if (userRole !== "ADMIN") {
+      return reply
+        .code(403)
+        .send({ message: "Only the house administrator can remove members." });
+    }
+
+    // 2. Regra de Negócio: O Admin não pode se remover
+    if (parseInt(userId) === adminId) {
+      return reply
+        .code(400)
+        .send({ message: "You cannot remove yourself from the house." });
+    }
+
+    try {
+      const removedMember = await this.houseService.removeMember(
+        parseInt(userId),
+        houseId
+      );
+
+      reply.code(200).send({
+        id: removedMember.id,
+        name: removedMember.name,
+        message: `User ${removedMember.name} successfully removed from the house.`,
+      });
+    } catch (error) {
+      this.fastify.log.error(error);
+      if (error.message.includes("User not found in this house")) {
+        return reply.code(404).send({ message: error.message });
+      }
+      reply.code(500).send({ message: "Could not remove member." });
+    }
+  }
 }

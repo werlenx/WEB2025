@@ -171,4 +171,40 @@ export class HouseService {
       throw error;
     }
   }
+
+  /**
+   * Remove um usuário da casa, definindo house_id como null e house_status como REJECTED.
+   */
+  async removeMember(userId, houseId) {
+    try {
+      // 1. O usuário que está sendo removido deve pertencer à casa
+      const userToRemove = await this.prisma.user.findUnique({
+        where: { id: userId, house_id: houseId },
+      });
+
+      if (!userToRemove) {
+        throw new Error("User not found in this house.");
+      }
+
+      // 2. Remove o usuário: seta house_id para null e o status para REJECTED
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          house_id: null,
+          house_status: "REJECTED",
+        },
+        select: { id: true, name: true, email: true, house_status: true },
+      });
+
+      return updatedUser;
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        throw new Error("User not found.");
+      }
+      throw error;
+    }
+  }
 }

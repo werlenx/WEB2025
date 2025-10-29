@@ -171,4 +171,39 @@ export async function houseRoutes(fastify) {
     },
     houseController.updateMemberStatusHandler.bind(houseController)
   );
+
+  // DELETE /house/members/:userId - Remove um membro da casa (Requer ADMIN).
+  fastify.delete(
+    "/members/:userId",
+    {
+      schema: {
+        tags: ["House"],
+        summary: "Remove um membro da casa (house_id = null). Requer ADMIN.",
+        security: [{ apiKey: [] }],
+        params: {
+          type: "object",
+          properties: {
+            userId: {
+              type: "number",
+              description: "ID do usuário a ser removido.",
+            },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              id: { type: "number" },
+              name: { type: "string" },
+              message: { type: "string" },
+            },
+          },
+          400: { type: "object", properties: { message: { type: "string" } } },
+          403: { type: "object", properties: { message: { type: "string" } } },
+          404: { type: "object", properties: { message: { type: "string" } } },
+        },
+      },
+    },
+    houseController.removeMemberHandler.bind(houseController)
+  );
 }

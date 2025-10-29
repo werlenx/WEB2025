@@ -1,5 +1,5 @@
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import Decimal from "decimal.js"; // Usado para garantir precisão monetária
+import Decimal from "decimal.js";
 
 export class AccountService {
   constructor(prisma) {
@@ -12,7 +12,6 @@ export class AccountService {
    */
   async createAccount(houseId, name, type, amount, dueDate, paidById) {
     return this.prisma.$transaction(async (tx) => {
-      // 1. Encontra todos os membros APROVADOS na casa (usuários que irão compartilhar a despesa)
       const members = await tx.user.findMany({
         where: {
           house_id: houseId,
@@ -27,30 +26,26 @@ export class AccountService {
         );
       }
 
-      // 2. Cria a conta principal
       const newAccount = await tx.account.create({
         data: {
           house_id: houseId,
           name: name,
           type: type,
-          amount: new Decimal(amount), // Converte para Decimal para precisão
+          amount: new Decimal(amount),
           due_date: new Date(dueDate),
           paid_by_id: paidById,
         },
       });
 
-      // 3. Calcula a divisão (share)
       const totalMembers = members.length;
       const amountDecimal = new Decimal(amount);
-      // Divisão igual, arredondada para duas casas decimais
       const shareAmount = amountDecimal.div(totalMembers).toFixed(2);
 
-      // 4. Cria os registros de PaymentShare para cada membro
       const paymentSharesData = members.map((member) => ({
         account_id: newAccount.id,
         user_id: member.id,
         share_amount: new Decimal(shareAmount),
-        is_paid: member.id === paidById ? true : false, // O pagador inicial já pagou sua parte para si mesmo
+        is_paid: member.id === paidById ? true : false,
       }));
 
       await tx.paymentShare.createMany({
@@ -62,8 +57,6 @@ export class AccountService {
   }
 
   async getAccounts(houseId) {
-    // Retorna todas as contas da casa, incluindo quem pagou (paid_by)
-    // e a lista de partes a serem pagas (payment_shares), com detalhes do usuário devedor.
     return this.prisma.account.findMany({
       where: { house_id: houseId },
       include: {
@@ -79,8 +72,47 @@ export class AccountService {
           orderBy: { user_id: "asc" },
         },
       },
-      // Mostra as mais recentes primeiro
       orderBy: { due_date: "desc" },
     });
+  }
+
+  /**
+   * @param {number} shareId
+   * @param {number} payingUserId
+   * @returns {Promise<object>}
+   */
+  async markShareAsPaid(accountId, payingUserId) {
+    try {
+      const updatedShare = await this.prisma.paymentShare.update({
+        where: {
+          account_id_user_id: {
+            account_id: accountId,
+            user_id: payingUserId,
+          },
+        },
+        data: {
+          is_paid: true,
+        },
+        select: {
+          account_id: true,
+          user_id: true,
+          is_paid: true,
+          share_amount: true,
+          account: {
+            select: { name: true, paid_by_id: true },
+          },
+        },
+      });
+
+      return updatedShare;
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        throw new Error("Payment share not found or already paid.");
+      }
+      throw error;
+    }
   }
 }

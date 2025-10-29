@@ -114,4 +114,38 @@ export async function accountRoutes(fastify) {
     },
     accountController.getAccountsHandler.bind(accountController)
   );
+
+  // PATCH /accounts/:accountId/pay - Marca a parte do usuário logado como paga.
+  fastify.patch(
+    "/:accountId/pay",
+    {
+      schema: {
+        tags: ["Accounts"],
+        summary:
+          "Marca a parte da despesa (PaymentShare) do usuário logado como paga.",
+        security: [{ apiKey: [] }],
+        params: {
+          type: "object",
+          required: ["accountId"],
+          properties: {
+            accountId: { type: "number", description: "ID da conta/despesa." },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              accountId: { type: "number" },
+              shareAmount: { type: "string" },
+              isPaid: { type: "boolean" },
+              message: { type: "string" },
+            },
+          },
+          400: { type: "object", properties: { message: { type: "string" } } },
+          404: { type: "object", properties: { message: { type: "string" } } },
+        },
+      },
+    },
+    accountController.markShareAsPaidHandler.bind(accountController)
+  );
 }
