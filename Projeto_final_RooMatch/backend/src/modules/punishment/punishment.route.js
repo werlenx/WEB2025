@@ -90,4 +90,103 @@ export async function punishmentRoutes(fastify) {
     },
     punishmentController.applyPunishmentHandler.bind(punishmentController)
   );
+
+  // POST /punishments/ - Cria uma nova punição (Requer ADMIN).
+  fastify.post(
+    "/",
+    {
+      schema: {
+        tags: ["Punishments"],
+        summary:
+          "Adiciona uma nova punição ao catálogo da casa (Requer ADMIN).",
+        security: [{ apiKey: [] }],
+        body: {
+          type: "object",
+          required: ["description", "penaltyPoints"],
+          properties: {
+            description: { type: "string" },
+            penaltyPoints: { type: "number", minimum: 1 },
+          },
+        },
+        response: {
+          201: {
+            type: "object",
+            properties: {
+              id: { type: "number" },
+              description: { type: "string" },
+              message: { type: "string" },
+            },
+          },
+          403: { type: "object", properties: { message: { type: "string" } } },
+        },
+      },
+    },
+    punishmentController.createPunishmentHandler.bind(punishmentController)
+  );
+
+  // PUT /punishments/:punishmentId - Atualiza uma punição existente (Requer ADMIN).
+  fastify.put(
+    "/:punishmentId",
+    {
+      schema: {
+        tags: ["Punishments"],
+        summary: "Atualiza uma punição existente no catálogo (Requer ADMIN).",
+        security: [{ apiKey: [] }],
+        params: {
+          type: "object",
+          properties: { punishmentId: { type: "number" } },
+        },
+        body: {
+          type: "object",
+          properties: {
+            description: { type: "string" },
+            penaltyPoints: { type: "number", minimum: 1 },
+            isActive: { type: "boolean" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              id: { type: "number" },
+              description: { type: "string" },
+              message: { type: "string" },
+            },
+          },
+          403: { type: "object", properties: { message: { type: "string" } } },
+          404: { type: "object", properties: { message: { type: "string" } } },
+        },
+      },
+    },
+    punishmentController.updatePunishmentHandler.bind(punishmentController)
+  );
+
+  // DELETE /punishments/:punishmentId - Deleta uma punição do catálogo (Requer ADMIN).
+  fastify.delete(
+    "/:punishmentId",
+    {
+      schema: {
+        tags: ["Punishments"],
+        summary: "Remove uma punição do catálogo (Requer ADMIN).",
+        security: [{ apiKey: [] }],
+        params: {
+          type: "object",
+          properties: { punishmentId: { type: "number" } },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              id: { type: "number" },
+              description: { type: "string" },
+              message: { type: "string" },
+            },
+          },
+          403: { type: "object", properties: { message: { type: "string" } } },
+          404: { type: "object", properties: { message: { type: "string" } } },
+        },
+      },
+    },
+    punishmentController.deletePunishmentHandler.bind(punishmentController)
+  );
 }

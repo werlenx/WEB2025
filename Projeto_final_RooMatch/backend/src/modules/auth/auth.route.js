@@ -78,4 +78,67 @@ export async function authRoutes(fastify) {
     },
     authController.loginHandler.bind(authController)
   );
+
+  fastify.post(
+    "/forgot-password",
+    {
+      schema: {
+        tags: ["Auth"],
+        summary: "Inicia o processo de reset de senha (gera token).",
+        body: {
+          type: "object",
+          required: ["email"],
+          properties: {
+            email: { type: "string", format: "email" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              message: { type: "string" },
+              resetToken: { type: "string", description: "Token (APENAS DEV)" },
+            },
+          },
+          400: { type: "object", properties: { message: { type: "string" } } },
+        },
+      },
+    },
+    authController.forgotPasswordHandler.bind(authController)
+  );
+
+  // Rota de Reset de Senha
+  fastify.post(
+    "/reset-password",
+    {
+      schema: {
+        tags: ["Auth"],
+        summary:
+          "Finaliza o processo de reset de senha (usa token para mudar a senha).",
+        body: {
+          type: "object",
+          required: ["token", "newPassword"],
+          properties: {
+            token: {
+              type: "string",
+              description: "Token recebido no forgot-password.",
+            },
+            newPassword: { type: "string", minLength: 3 },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              id: { type: "number" },
+              email: { type: "string" },
+              message: { type: "string" },
+            },
+          },
+          400: { type: "object", properties: { message: { type: "string" } } },
+        },
+      },
+    },
+    authController.resetPasswordHandler.bind(authController)
+  );
 }

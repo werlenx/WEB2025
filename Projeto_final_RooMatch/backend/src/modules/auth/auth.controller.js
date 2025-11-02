@@ -91,4 +91,65 @@ export class AuthController {
       },
     });
   }
+
+  // POST /auth/forgot-password
+  async forgotPasswordHandler(request, reply) {
+    const { email } = request.body;
+
+    if (!email) {
+      return reply.code(400).send({ message: "Email is required." });
+    }
+
+    try {
+      const result = await this.authService.createPasswordResetToken(email);
+
+      // Conforme o Service, retornamos o token apenas para DEV/TESTE
+      reply.code(200).send({
+        message:
+          "If the email is registered, a password reset token has been generated.",
+        resetToken: result.resetToken, // Retorna para teste
+      });
+    } catch (error) {
+      this.fastify.log.error(error);
+      reply
+        .code(500)
+        .send({ message: "Could not process password reset request." });
+    }
+  }
+
+  // POST /auth/reset-password
+  async resetPasswordHandler(request, reply) {
+    const { token, newPassword } = request.body;
+
+    if (!token || !newPassword) {
+      return reply
+        .code(400)
+        .send({ message: "Token and newPassword are required." });
+    }
+
+    if (newPassword.length < 3) {
+      return reply
+        .code(400)
+        .send({ message: "Password must be at least 3 characters long." });
+    }
+
+    try {
+      const updatedUser = await this.authService.resetPassword(
+        token,
+        newPassword
+      );
+
+      reply.code(200).send({
+        id: updatedUser.id,
+        email: updatedUser.email,
+        message: "Password has been successfully updated.",
+      });
+    } catch (error) {
+      this.fastify.log.error(error);
+      if (error.message.includes("Token is invalid or has expired")) {
+        return reply.code(400).send({ message: error.message });
+      }
+      reply.code(500).send({ message: "Could not reset password." });
+    }
+  }
 }

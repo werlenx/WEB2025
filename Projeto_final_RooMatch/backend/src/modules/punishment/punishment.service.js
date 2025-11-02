@@ -5,22 +5,16 @@ export class PunishmentService {
     this.prisma = prisma;
   }
 
-  /**
-   * Lista todas as punições ativas de uma casa.
-   */
   async getPunishments(houseId) {
     return this.prisma.punishment.findMany({
       where: {
         house_id: houseId,
-        is_active: true, // Mostra apenas punições que podem ser aplicadas
+        is_active: true,
       },
       orderBy: { penalty_points: "desc" },
     });
   }
 
-  /**
-   * Aplica uma punição a um usuário, decrementa o score e registra no histórico.
-   */
   async applyPunishment(punishmentId, targetUserId, houseId) {
     return this.prisma.$transaction(async (tx) => {
       // 1. Busca a punição e o usuário alvo, garantindo que ambos pertencem à casa
@@ -63,5 +57,66 @@ export class PunishmentService {
 
       return { updatedUser, punishment };
     });
+  }
+
+  async createPunishment(houseId, description, penaltyPoints) {
+    return this.prisma.punishment.create({
+      data: {
+        house_id: houseId,
+        description: description,
+        penalty_points: penaltyPoints,
+        is_active: true,
+      },
+    });
+  }
+
+  async updatePunishment(
+    punishmentId,
+    houseId,
+    description,
+    penaltyPoints,
+    isActive
+  ) {
+    try {
+      return this.prisma.punishment.update({
+        where: {
+          id: punishmentId,
+          house_id: houseId, // Garante que a punição pertence à casa
+        },
+        data: {
+          description: description,
+          penalty_points: penaltyPoints,
+          is_active: isActive,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        throw new Error("Punishment not found in your house.");
+      }
+      throw error;
+    }
+  }
+
+  async deletePunishment(punishmentId, houseId) {
+    try {
+      const deletedPunishment = await this.prisma.punishment.delete({
+        where: {
+          id: punishmentId,
+          house_id: houseId,
+        },
+      });
+      return deletedPunishment;
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        throw new Error("Punishment not found in your house.");
+      }
+      throw error;
+    }
   }
 }
