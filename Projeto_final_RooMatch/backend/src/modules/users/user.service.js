@@ -14,7 +14,7 @@ export class UserService {
           email: data.email,
           avatar_color: data.avatarColor,
         },
-        // Seleciona os campos que o frontend precisa
+
         select: {
           id: true,
           name: true,
@@ -24,11 +24,10 @@ export class UserService {
           star_avg: true,
           house_id: true,
           house_status: true,
-          profile: { select: { name: true } }, // Para obter a role
+          profile: { select: { name: true } },
         },
       });
 
-      // Retorna o objeto formatado, sem a senha
       return {
         id: user.id,
         name: user.name,
@@ -41,7 +40,6 @@ export class UserService {
         role: user.profile.name,
       };
     } catch (error) {
-      // Handle Prisma's unique constraint violation
       if (
         error?.name === "PrismaClientKnownRequestError" &&
         error?.code === "P2002"
@@ -53,7 +51,7 @@ export class UserService {
           throw customError;
         }
       }
-      throw error; // Re-throw other errors for controller to handle
+      throw error;
     }
   }
 }

@@ -3,7 +3,6 @@ import { UserController } from "./user.controller.js";
 export async function userRoutes(fastify) {
   const userController = new UserController(fastify);
 
-  // Hook para autenticação: todas as rotas deste arquivo requerem JWT.
   fastify.addHook("onRequest", fastify.authenticate);
 
   // PATCH /users/me - Atualiza o perfil do usuário logado
