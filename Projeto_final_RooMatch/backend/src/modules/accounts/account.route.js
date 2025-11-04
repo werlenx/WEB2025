@@ -3,7 +3,6 @@ import { AccountController } from "./account.controller.js";
 export async function accountRoutes(fastify) {
   const accountController = new AccountController(fastify);
 
-  // Hook para autenticação
   fastify.addHook("onRequest", fastify.authenticate);
 
   const paymentShareSchema = {
@@ -49,7 +48,6 @@ export async function accountRoutes(fastify) {
     },
   };
 
-  // POST /accounts/ - Cria uma nova conta/despesa.
   fastify.post(
     "/",
     {
@@ -115,7 +113,6 @@ export async function accountRoutes(fastify) {
     accountController.getAccountsHandler.bind(accountController)
   );
 
-  // PATCH /accounts/:accountId/pay - Marca a parte do usuário logado como paga.
   fastify.patch(
     "/:accountId/pay",
     {

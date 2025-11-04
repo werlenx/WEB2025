@@ -6,7 +6,6 @@ export class TaskController {
     this.taskService = new TaskService(fastify.prisma);
   }
 
-  // POST /tasks/
   async createTaskHandler(request, reply) {
     const {
       title,
@@ -18,7 +17,6 @@ export class TaskController {
       canBuyOut,
     } = request.body;
 
-    // Obtém o houseId do payload do JWT
     const houseId = request.user && request.user.houseId;
 
     if (!houseId) {
@@ -57,7 +55,6 @@ export class TaskController {
     }
   }
 
-  // GET /tasks/
   async getTasksHandler(request, reply) {
     const houseId = request.user && request.user.houseId;
 
@@ -68,7 +65,6 @@ export class TaskController {
     try {
       const tasks = await this.taskService.getTasks(houseId);
 
-      // Normaliza dados para o formato de resposta
       const normalizedTasks = tasks.map((t) => ({
         ...t,
         star_average: t.star_average ? t.star_average.toString() : null,
@@ -88,7 +84,6 @@ export class TaskController {
     }
   }
 
-  // PATCH /tasks/:taskId/status
   async updateTaskStatusHandler(request, reply) {
     const { taskId } = request.params || {};
     const { status } = request.body || {};
@@ -112,7 +107,6 @@ export class TaskController {
 
       if (!task) return reply.code(404).send({ message: "Task not found." });
 
-      // Only the responsible user may set AWAITING_REVIEW or FAILED
       if (
         (status === "AWAITING_REVIEW" || status === "FAILED") &&
         task.responsible_id !== userId
@@ -144,7 +138,6 @@ export class TaskController {
     }
   }
 
-  // POST /tasks/:taskId/review
   async reviewTaskHandler(request, reply) {
     const { taskId } = request.params;
     const { stars } = request.body;
@@ -155,7 +148,6 @@ export class TaskController {
       return reply.code(400).send({ message: "User must belong to a house." });
     }
 
-    // 1. Validação inicial da tarefa e revisor
     const task = await this.fastify.prisma.task.findUnique({
       where: { id: parseInt(taskId) },
     });
@@ -164,20 +156,16 @@ export class TaskController {
       return reply.code(404).send({ message: "Task not found in your house." });
     }
 
-    // 2. Regra de Negócio: O responsável não pode se auto-avaliar
     if (task.responsible_id === reviewerId) {
       return reply
         .code(403)
         .send({ message: "Responsible user cannot review their own task." });
     }
 
-    // 3. Regra de Negócio: Só pode avaliar se o status for AWAITING_REVIEW
     if (task.status !== "AWAITING_REVIEW") {
-      return reply
-        .code(400)
-        .send({
-          message: `Task status is '${task.status}'. Must be AWAITING_REVIEW to be reviewed.`,
-        });
+      return reply.code(400).send({
+        message: `Task status is '${task.status}'. Must be AWAITING_REVIEW to be reviewed.`,
+      });
     }
 
     try {

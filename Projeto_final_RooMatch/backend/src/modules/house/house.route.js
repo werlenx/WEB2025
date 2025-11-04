@@ -171,8 +171,7 @@ export async function houseRoutes(fastify) {
     },
     houseController.updateMemberStatusHandler.bind(houseController)
   );
-
-  // DELETE /house/members/:userId - Remove um membro da casa (Requer ADMIN).
+  // DELETE /house/members/:userId - Remove membro da casa.
   fastify.delete(
     "/members/:userId",
     {

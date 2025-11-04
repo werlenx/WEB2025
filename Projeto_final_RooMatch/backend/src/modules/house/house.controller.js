@@ -8,7 +8,6 @@ export class HouseController {
     this.authService = new AuthService(fastify.prisma);
   }
 
-  // POST /house/
   async createHouseHandler(request, reply) {
     const { houseName } = request.body || {};
     const userId = request.user && (request.user.id || request.user.sub);
@@ -17,7 +16,6 @@ export class HouseController {
       return reply.code(401).send({ message: "Unauthorized" });
     }
 
-    // Ensure user does not already belong to a house
     const user = await this.fastify.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -41,7 +39,6 @@ export class HouseController {
     }
   }
 
-  // POST /house/join
   async joinHouseHandler(request, reply) {
     const { houseCode, automaticApproval = false } = request.body || {};
     const userId = request.user && (request.user.id || request.user.sub);
@@ -70,39 +67,6 @@ export class HouseController {
     }
   }
 
-  // GET /house/
-  // async getHouseHandler(request, reply) {
-  //   const houseId =
-  //     request.user &&
-  //     (request.user.houseId || request.user.house_id || request.user.houseId);
-  //   if (!houseId) return reply.code(404).send({ message: "User has no house" });
-
-  //   try {
-  //     const details = await this.houseService.getHouseDetails(houseId);
-  //     if (!details) return reply.code(404).send({ message: "House not found" });
-
-  //     // Normalize star_avg to string to keep consistency with other endpoints
-  //     if (details.members) {
-  //       details.members = details.members.map((m) => ({
-  //         ...m,
-  //         star_avg: m.star_avg ? m.star_avg.toString() : "0.0",
-  //         role: m.profile ? m.profile.name : undefined,
-  //       }));
-  //     }
-
-  //     reply.code(200).send({
-  //       id: details.id,
-  //       name: details.name,
-  //       code: details.code,
-  //       adminId: details.admin_id,
-  //       members: details.members || [],
-  //       pendingMembers: details.pending_members || [],
-  //     });
-  //   } catch (error) {
-  //     this.fastify.log.error(error);
-  //     reply.code(500).send({ message: "Could not retrieve house details" });
-  //   }
-  // }
   async getHouseHandler(request, reply) {
     const houseId =
       request.user &&
@@ -137,7 +101,6 @@ export class HouseController {
     }
   }
 
-  // PATCH /house/members/:userId/status
   async updateMemberStatusHandler(request, reply) {
     const { userId } = request.params;
     const { status } = request.body;
@@ -150,14 +113,12 @@ export class HouseController {
       return reply.code(400).send({ message: "User must belong to a house." });
     }
 
-    // 1. Regra de Negócio: Somente o ADMIN da casa pode aprovar/rejeitar.
     if (userRole !== "ADMIN") {
       return reply
         .code(403)
         .send({ message: "Only the house administrator can manage members." });
     }
 
-    // 2. Regra de Negócio: O Admin não pode mudar o próprio status.
     if (parseInt(userId) === adminId) {
       return reply
         .code(400)
@@ -190,7 +151,6 @@ export class HouseController {
     }
   }
 
-  // DELETE /house/members/:userId
   async removeMemberHandler(request, reply) {
     const { userId } = request.params;
 
@@ -202,14 +162,12 @@ export class HouseController {
       return reply.code(400).send({ message: "User must belong to a house." });
     }
 
-    // 1. Regra de Negócio: Somente o ADMIN pode remover.
     if (userRole !== "ADMIN") {
       return reply
         .code(403)
         .send({ message: "Only the house administrator can remove members." });
     }
 
-    // 2. Regra de Negócio: O Admin não pode se remover
     if (parseInt(userId) === adminId) {
       return reply
         .code(400)

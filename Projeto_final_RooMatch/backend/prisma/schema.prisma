@@ -21,12 +21,12 @@ enum TaskFrequency {
 }
 
 enum TaskStatus {
-  PENDING // pendente
-  AWAITING_REVIEW // aguardando avaliação
-  COMPLETED // concluida
-  FAILED // falhou
-  REDO // refazer
-  BOUGHT_OUT // folga comprada
+  PENDING
+  AWAITING_REVIEW
+  COMPLETED
+  FAILED
+  REDO
+  BOUGHT_OUT
 }
 
 enum AccountType {
@@ -42,7 +42,6 @@ enum HistoryEventType {
   ACCOUNT_PAID
 }
 
-// 1. Core: Perfis, Casas e Usuários
 
 model Profile {
   id      Int    @id @default(autoincrement())

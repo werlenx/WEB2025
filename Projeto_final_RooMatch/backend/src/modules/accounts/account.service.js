@@ -6,10 +6,6 @@ export class AccountService {
     this.prisma = prisma;
   }
 
-  /**
-   * Cria uma nova conta, calcula a divisão igualitária entre todos os membros APROVADOS,
-   * e registra as PaymentShares.
-   */
   async createAccount(houseId, name, type, amount, dueDate, paidById) {
     return this.prisma.$transaction(async (tx) => {
       const members = await tx.user.findMany({
@@ -22,7 +18,7 @@ export class AccountService {
 
       if (members.length === 0) {
         throw new Error(
-          "Cannot create account: No approved members in the house to share the expense."
+          "Não foi possível criar a conta: Não há membros aprovados para a divisão de contas."
         );
       }
 

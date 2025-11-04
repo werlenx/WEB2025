@@ -7,18 +7,15 @@ export class AuthController {
     this.authService = new AuthService(fastify.prisma);
   }
 
-  // POST /auth/register
   async registerHandler(request, reply) {
     const { name, email, password } = request.body;
 
-    // 1. Validação de existência
     const existingUser = await this.authService.findUserByEmail(email);
     if (existingUser) {
-      reply.code(409).send({ message: "User already exists with this email." });
+      reply.code(409).send({ message: "Email ja cadastrado" });
       return;
     }
 
-    // 2. Criação do Usuário (Service lida com hashing)
     try {
       const newUser = await this.authService.registerUser(
         name,
@@ -26,26 +23,21 @@ export class AuthController {
         password
       );
 
-      // 3. Resposta de Sucesso
       reply.code(201).send({
         id: newUser.id,
         name: newUser.name,
         email: newUser.email,
-        message: "Registration successful. Awaiting house approval.",
+        message: "Registrado! aguardando aprovação.",
       });
     } catch (error) {
       this.fastify.log.error(error);
-      reply
-        .code(500)
-        .send({ message: "Internal server error during registration." });
+      reply.code(500).send({ message: "erro interno durante o registro" });
     }
   }
 
-  // POST /auth/login
   async loginHandler(request, reply) {
     const { email, password } = request.body;
 
-    // 1. Busca o Usuário (o Service inclui o hash e o profile)
     const user = await this.authService.findUserByEmail(email);
 
     if (!user) {
@@ -55,7 +47,6 @@ export class AuthController {
       return;
     }
 
-    // 2. Compara a senha (usando bcrypt)
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordMatch) {
@@ -65,7 +56,6 @@ export class AuthController {
       return;
     }
 
-    // 3. Cria o payload do JWT (dados a serem armazenados no token)
     const tokenPayload = {
       id: user.id,
       email: user.email,
@@ -73,10 +63,8 @@ export class AuthController {
       houseId: user.house_id,
     };
 
-    // 4. Gera o token
     const token = this.fastify.jwt.sign(tokenPayload);
 
-    // 5. Resposta de Sucesso (inclui dados do usuário e token)
     reply.code(200).send({
       token,
       user: {
@@ -92,7 +80,6 @@ export class AuthController {
     });
   }
 
-  // POST /auth/forgot-password
   async forgotPasswordHandler(request, reply) {
     const { email } = request.body;
 
@@ -103,11 +90,10 @@ export class AuthController {
     try {
       const result = await this.authService.createPasswordResetToken(email);
 
-      // Conforme o Service, retornamos o token apenas para DEV/TESTE
       reply.code(200).send({
         message:
           "If the email is registered, a password reset token has been generated.",
-        resetToken: result.resetToken, // Retorna para teste
+        resetToken: result.resetToken,
       });
     } catch (error) {
       this.fastify.log.error(error);
@@ -117,7 +103,6 @@ export class AuthController {
     }
   }
 
-  // POST /auth/reset-password
   async resetPasswordHandler(request, reply) {
     const { token, newPassword } = request.body;
 

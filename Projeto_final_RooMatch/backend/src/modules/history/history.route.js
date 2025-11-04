@@ -3,7 +3,6 @@ import { HistoryController } from "./history.controller.js";
 export async function historyRoutes(fastify) {
   const historyController = new HistoryController(fastify);
 
-  // Hook para autenticação
   fastify.addHook("onRequest", fastify.authenticate);
 
   const historySchema = {
@@ -29,7 +28,6 @@ export async function historyRoutes(fastify) {
     },
   };
 
-  // GET /history/ - Lista o feed de atividades da casa.
   fastify.get(
     "/",
     {

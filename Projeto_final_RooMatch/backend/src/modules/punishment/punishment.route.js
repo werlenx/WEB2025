@@ -3,7 +3,6 @@ import { PunishmentController } from "./punishment.controller.js";
 export async function punishmentRoutes(fastify) {
   const punishmentController = new PunishmentController(fastify);
 
-  // Hook para autenticação
   fastify.addHook("onRequest", fastify.authenticate);
 
   const punishmentSchema = {

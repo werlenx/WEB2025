@@ -6,7 +6,6 @@ export class HistoryController {
     this.historyService = new HistoryService(fastify.prisma);
   }
 
-  // GET /history/
   async getHistoryHandler(request, reply) {
     const houseId = request.user && request.user.houseId;
 
@@ -17,7 +16,6 @@ export class HistoryController {
     try {
       const history = await this.historyService.getHistory(houseId);
 
-      // Formatação simples para garantir que todos os campos necessários estejam presentes
       const formattedHistory = history.map((item) => ({
         id: item.id,
         eventType: item.event_type,

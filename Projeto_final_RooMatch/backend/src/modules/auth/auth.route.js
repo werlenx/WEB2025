@@ -1,10 +1,8 @@
 import { AuthController } from "./auth.controller.js";
 
 export async function authRoutes(fastify) {
-  // Instancia o Controller
   const authController = new AuthController(fastify);
 
-  // Rota de Registro (Cadastro de novo Usuário)
   fastify.post(
     "/register",
     {
@@ -107,7 +105,6 @@ export async function authRoutes(fastify) {
     authController.forgotPasswordHandler.bind(authController)
   );
 
-  // Rota de Reset de Senha
   fastify.post(
     "/reset-password",
     {

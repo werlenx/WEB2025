@@ -75,12 +75,10 @@ export class HouseService {
   }
 
   async getHouseDetails(houseId) {
-    // CORREÇÃO 1: Removemos a tentativa de usar 'pending_members' no 'include'.
     return this.prisma.house.findUnique({
       where: { id: houseId },
       include: {
         members: {
-          // Esta inclusão trará APENAS os APPROVED
           where: { house_status: "APPROVED" },
           select: {
             id: true,
@@ -92,18 +90,15 @@ export class HouseService {
             profile: { select: { name: true } },
           },
         },
-        // O restante das inclusões da House (admin, tasks, etc.) não precisa de alteração
       },
     });
   }
 
   async getHouseDetails(houseId) {
-    // CORRIGIDO: Retiramos 'pending_members' daqui
     return this.prisma.house.findUnique({
       where: { id: houseId },
       include: {
         members: {
-          // Trará APENAS os APPROVED
           where: { house_status: "APPROVED" },
           select: {
             id: true,
@@ -115,7 +110,6 @@ export class HouseService {
             profile: { select: { name: true } },
           },
         },
-        // 'pending_members' REMOVIDO DAQUI
       },
     });
   }
@@ -134,10 +128,6 @@ export class HouseService {
     });
   }
 
-  /**
-   * Atualiza o status de um membro (APPROVE, REJECT, PENDING) e garante que
-   * o usuário pertence à casa.
-   */
   async updateMemberStatus(userId, houseId, newStatus) {
     const validStatuses = ["APPROVED", "REJECTED", "PENDING"];
 
@@ -149,7 +139,7 @@ export class HouseService {
       return this.prisma.user.update({
         where: {
           id: userId,
-          house_id: houseId, // Garante que o alvo está na casa do admin
+          house_id: houseId,
         },
         data: {
           house_status: newStatus,
@@ -172,12 +162,8 @@ export class HouseService {
     }
   }
 
-  /**
-   * Remove um usuário da casa, definindo house_id como null e house_status como REJECTED.
-   */
   async removeMember(userId, houseId) {
     try {
-      // 1. O usuário que está sendo removido deve pertencer à casa
       const userToRemove = await this.prisma.user.findUnique({
         where: { id: userId, house_id: houseId },
       });
@@ -186,7 +172,6 @@ export class HouseService {
         throw new Error("User not found in this house.");
       }
 
-      // 2. Remove o usuário: seta house_id para null e o status para REJECTED
       const updatedUser = await this.prisma.user.update({
         where: { id: userId },
         data: {

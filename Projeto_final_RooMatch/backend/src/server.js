@@ -28,7 +28,7 @@ async function startServer() {
   await fastify.register(prismaPlugin);
 
   await fastify.register(fastifyJwt, {
-    secret: process.env.JWT_SECRET || "fallback_secret_in_development_only",
+    secret: process.env.JWT_SECRET,
   });
 
   fastify.decorate("authenticate", async function (request, reply) {
@@ -70,7 +70,7 @@ async function startServer() {
   await fastify.register(historyRoutes, { prefix: "/history" });
 
   fastify.get("/", async (request, reply) => {
-    return { status: "ok", message: "RooMatch API is running!" };
+    return { status: "ok", message: "RooMatchApp API!" };
   });
 
   const port = process.env.PORT || 3333;
@@ -78,7 +78,7 @@ async function startServer() {
   try {
     await fastify.listen({ port });
     console.log(`\nServidor rodando em: http://localhost:${port}`);
-    console.log(`Documentação (Swagger UI): http://localhost:${port}/docs`);
+    console.log(`Documentação em: http://localhost:${port}/docs`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

@@ -6,13 +6,6 @@ export class PunishmentController {
     this.punishmentService = new PunishmentService(fastify.prisma);
   }
 
-  /**
-   * Centraliza a validação de contexto (House ID e Role).
-   * @param {object} request - Objeto de requisição do Fastify.
-   * @param {object} reply - Objeto de resposta do Fastify.
-   * @param {boolean} requiresAdmin - Se a rota exige permissão de ADMIN.
-   * @returns {{houseId: number | undefined, userRole: string | undefined} | false} Contexto ou false se falhar.
-   */
   _validateContext(request, reply, requiresAdmin = false) {
     const houseId = request.user?.houseId;
     const userRole = request.user?.role;
@@ -32,9 +25,7 @@ export class PunishmentController {
     return { houseId, userRole };
   }
 
-  // GET /punishments/
   async getPunishmentsHandler(request, reply) {
-    // 1. Validação: Apenas checa se pertence a uma casa.
     const context = this._validateContext(request, reply);
     if (!context) return;
     const { houseId } = context;
@@ -48,9 +39,7 @@ export class PunishmentController {
     }
   }
 
-  // POST /punishments/apply
   async applyPunishmentHandler(request, reply) {
-    // 1. Validação: Requer Admin para aplicar punição.
     const context = this._validateContext(request, reply, true);
     if (!context) return;
     const { houseId } = context;
@@ -87,9 +76,7 @@ export class PunishmentController {
     }
   }
 
-  // POST /punishments/ (Criação)
   async createPunishmentHandler(request, reply) {
-    // 1. Validação: Requer Admin para criar.
     const context = this._validateContext(request, reply, true);
     if (!context) return;
     const { houseId } = context;
@@ -114,9 +101,7 @@ export class PunishmentController {
     }
   }
 
-  // PUT /punishments/:punishmentId
   async updatePunishmentHandler(request, reply) {
-    // 1. Validação: Requer Admin para atualizar.
     const context = this._validateContext(request, reply, true);
     if (!context) return;
     const { houseId } = context;
@@ -147,9 +132,7 @@ export class PunishmentController {
     }
   }
 
-  // DELETE /punishments/:punishmentId
   async deletePunishmentHandler(request, reply) {
-    // 1. Validação: Requer Admin para deletar.
     const context = this._validateContext(request, reply, true);
     if (!context) return;
     const { houseId } = context;

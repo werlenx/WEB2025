@@ -6,11 +6,9 @@ export class AccountController {
     this.accountService = new AccountService(fastify.prisma);
   }
 
-  // POST /accounts/
   async createAccountHandler(request, reply) {
     const { name, type, amount, dueDate } = request.body;
 
-    // O usuário logado é o pagador inicial
     const paidById = request.user && request.user.id;
     const houseId = request.user && request.user.houseId;
 
@@ -46,7 +44,6 @@ export class AccountController {
     }
   }
 
-  // GET /accounts/
   async getAccountsHandler(request, reply) {
     const houseId = request.user && request.user.houseId;
 
@@ -58,18 +55,16 @@ export class AccountController {
 
     try {
       const accounts = await this.accountService.getAccounts(houseId);
-
-      // Formata a resposta para garantir que valores Decimal sejam strings
       const formattedAccounts = accounts.map((account) => ({
         id: account.id,
         name: account.name,
         type: account.type,
-        amount: account.amount.toString(), // Decimal -> String
+        amount: account.amount.toString(),
         dueDate: account.due_date,
         paidBy: account.paid_by,
         paymentShares: account.payment_shares.map((share) => ({
           userId: share.user_id,
-          shareAmount: share.share_amount.toString(), // Decimal -> String
+          shareAmount: share.share_amount.toString(),
           isPaid: share.is_paid,
           user: share.user,
         })),
@@ -82,20 +77,20 @@ export class AccountController {
     }
   }
 
-  // PATCH /accounts/:accountId/pay
   async markShareAsPaidHandler(request, reply) {
     const { accountId } = request.params;
     const userId = request.user && request.user.id;
     const houseId = request.user && request.user.houseId;
 
     if (!houseId) {
-      return reply.code(400).send({ message: "User must belong to a house." });
+      return reply
+        .code(400)
+        .send({ message: "Usuário deve pertencer a uma casa." });
     }
 
     try {
       const accountIdNum = parseInt(accountId);
 
-      // 1. Verificação: Garante que a conta existe e pertence a esta casa
       const account = await this.fastify.prisma.account.findUnique({
         where: { id: accountIdNum },
       });
@@ -103,10 +98,9 @@ export class AccountController {
       if (!account || account.house_id !== houseId) {
         return reply
           .code(404)
-          .send({ message: "Account not found in your house." });
+          .send({ message: "Conta não encontrada para esta casa." });
       }
 
-      // 2. Chama o Service para marcar como pago
       const updatedShare = await this.accountService.markShareAsPaid(
         accountIdNum,
         userId
@@ -116,17 +110,20 @@ export class AccountController {
         accountId: updatedShare.account_id,
         shareAmount: updatedShare.share_amount.toString(),
         isPaid: updatedShare.is_paid,
-        message: `Your share of ${updatedShare.account.name} has been marked as paid.`,
+        message: `Sua conta de  ${updatedShare.account.name} foi paga.`,
       });
     } catch (error) {
       this.fastify.log.error(error);
-      if (error.message.includes("Payment share not found")) {
-        // P2025 é um erro comum, pode significar que a share já foi paga ou ID incorreto
+      if (error.message.includes("Pagamento não encontrado")) {
         return reply
           .code(400)
-          .send({ message: "Share not found for this user or already paid." });
+          .send({
+            message: "não foi encontrada para este utilizador ou já foi paga..",
+          });
       }
-      reply.code(500).send({ message: "Could not register payment." });
+      reply
+        .code(500)
+        .send({ message: "Não foi possível registrar o pagamento." });
     }
   }
 }

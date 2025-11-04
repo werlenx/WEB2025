@@ -1,52 +1,112 @@
-arkdown# 🏡 RooMatch - API Backend
+### 4. Setup do Prisma e Histórico de Migrações
 
-Este projeto é o backend da aplicação RooMatch, desenvolvida para gerenciar tarefas domésticas, pontuação (gamificação), e finanças (divisão de contas) em casas compartilhadas.
+Estes passos recriam a estrutura do banco de dados na ordem exata de nosso desenvolvimento:
 
-O backend utiliza **Fastify** (Node.js) para rotas rápidas e **Prisma** com **PostgreSQL** para persistência de dados.
-
-## 🚀 Tecnologias Principais
-
-- **Framework:** Fastify
-- **Banco de Dados:** PostgreSQL (via Docker)
-- **ORM:** Prisma ORM
-- **Autenticação:** JWT (JSON Web Tokens)
-- **Documentação:** Swagger/OpenAPI
-
-## ⚙️ Instalação e Configuração
-
-### 1. Pré-requisitos
-
-Certifique-se de ter o `Node.js` (v18+) e o `Docker` instalados em sua máquina.
-
-### 2. Configuração Inicial
-
-1.  **Instale as dependências:**
+1.  **Criação Inicial do Schema e Primeira Migração:**
 
     ```bash
-    npm install
+    # (Comando inicial que cria o schema e a primeira migração base)
+    npx prisma migrate dev --name init_full_schemas
     ```
 
-2.  **Crie o arquivo de variáveis de ambiente (`.env`):**
+2.  **Migração para o Módulo Reset de Senha:**
 
-    ```
-    # Variável de ambiente crucial para o JWT
-    JWT_SECRET="sua_chave_secreta_aqui"
-
-    # Variável de ambiente crucial para o Prisma conectar ao Docker (PostgreSQL)
-    DATABASE_URL="postgresql://admin:admin@localhost:5432/roomatch_bd?schema=public"
+    ```bash
+    # (Adiciona as colunas reset_password_token e reset_password_expires ao modelo User)
+    npx prisma migrate dev --name add_password_reset_fields
     ```
 
-### 3. Subindo o Banco de Dados (Docker)
+3.  **Migração para o Módulo Accounts Não Pagas:**
 
-Utilizamos o Docker Compose para rodar o PostgreSQL de forma isolada.
+    ```bash
+    # (Torna a coluna paid_by_id da tabela Account opcional (Int?))
+    npx prisma migrate dev --name make_account_paid_by_optional
+    ```
+
+4.  **População Inicial de Dados (Seed):**
+    ```bash
+    # Insere Perfis, Usuários Admin/Comum, Casa, Tarefas iniciais e Punições
+    npm run prisma:seed
+    ```
+
+## ▶️ Executando a Aplicação
+
+O servidor Fastify será iniciado e observará as mudanças de arquivo (`nodemon`):
 
 ```bash
-docker-compose up -d
-(O banco de dados estará disponível na porta 5432.)4. Setup do PrismaExecute as migrações e o script de seed para popular o banco com dados de teste (werlen@example.com, marcela@example.com, david@example.com):Bashnpx prisma migrate dev --name init_full_schemas
-npm run prisma:seed # (ou npx prisma db seed, dependendo da sua versão)
-▶️ Executando a AplicaçãoO servidor Fastify será iniciado e observará as mudanças de arquivo (nodemon).Bashnpm run dev
-Endpoints ÚteisRecursoURL BaseDocumentaçãoServidorhttp://localhost:3333Documentaçãohttp://localhost:3333/docsSwagger UILogin/Registro/authCasa/Membros/houseTarefas/tasksContas/accounts🔑 Dados de Teste Padrão (Seed)UsuárioEmailSenhaPerfilHouse StatusWerlenwerlen@example.com123ADMINAPPROVEDMarcelamarcela@example.com123COMMONAPPROVEDDaviddavid@example.com123COMMONAPPROVED
----
+npm run dev
 
-**Prioridade:** Aplique a correção no **`user.controller.js`** e tente o Cenário 2 (email duplicado) novamente. Me diga o resultado!
+
+
+
+💻 Estrutura da API
+A API está organizada nos seguintes módulos e endpoints, acessíveis pela URL base http://localhost:3333.
+
+Documentação
+URL Base: http://localhost:3333/docs
+
+Ação: Acesso à interface Swagger UI para visualização da documentação completa da API.
+
+Auth (Autenticação)
+URL Base: /auth
+
+Ações: POST /auth/login (Login), POST /auth/register (Cadastro), POST /auth/forgot-password (Recuperação de Senha).
+
+Users (Usuários)
+URL Base: /users
+
+Ação: PATCH /users/me (Atualiza o perfil do usuário logado).
+
+House (Casa/Comunidade)
+URL Base: /house
+
+Ações: GET /house (Busca informações da casa), POST /house/join (Solicita entrada na casa), PATCH /house/members/:userId/status (Atualiza o status de um membro da casa, e.g., aprovação).
+
+Tasks (Tarefas)
+URL Base: /tasks
+
+Ações: POST /tasks (Cria nova tarefa), GET /tasks (Lista tarefas), PATCH /tasks/:taskId/status (Atualiza o status de uma tarefa), POST /tasks/:taskId/review (Envia uma revisão/avaliação da tarefa).
+
+Accounts (Contas/Finanças)
+URL Base: /accounts
+
+Ações: POST /accounts (Cria nova conta), GET /accounts (Lista contas), PATCH /accounts/:accountId/pay (Registra um pagamento em uma conta).
+
+Punishments (Punições)
+URL Base: /punishments
+
+Ações: POST /punishments (Cria nova punição), GET /punishments (Lista punições), POST /punishments/apply (Aplica uma punição a um usuário).
+
+👥 Dados dos Usuários Cadastrados
+Abaixo estão os dados dos usuários de exemplo, incluindo credenciais e status na comunidade (House Status):
+
+Werlen
+
+Email: werlen@example.com
+
+Senha: 123
+
+Perfil: ADMIN
+
+House Status: APPROVED
+
+Marcela
+
+Email: marcela@example.com
+
+Senha: 123
+
+Perfil: COMMON
+
+House Status: APPROVED
+
+David
+
+Email: david@example.com
+
+Senha: 123
+
+Perfil: COMMON
+
+House Status: APPROVED
 ```

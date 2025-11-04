@@ -4,13 +4,10 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Iniciando o script de Seed (Admin + 2 Comuns)...");
-
   const ADMIN_EMAIL = "werlen@example.com";
   const COMMON_PASSWORD = "123";
 
   const passwordHash = await bcrypt.hash(COMMON_PASSWORD, 10);
-  console.log(`Senha padrão "123" hasheada.`);
 
   const adminProfile = await prisma.profile.upsert({
     where: { name: "ADMIN" },
@@ -57,9 +54,7 @@ async function main() {
     },
   });
 
-  console.log(
-    "Criando usuários comuns: marcela@example.com e david@example.com..."
-  );
+  /* usuarios comuns */
 
   const userMarcela = await prisma.user.upsert({
     where: { email: "marcela@example.com" },
@@ -165,10 +160,6 @@ async function main() {
       can_buy_out: true,
     },
   });
-
-  console.log(
-    "Seed concluído. 3 usuários ativos. Admin: werlen@example.com / 123"
-  );
 }
 
 main()
