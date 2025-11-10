@@ -72,11 +72,7 @@ export class AccountService {
     });
   }
 
-  /**
-   * @param {number} shareId
-   * @param {number} payingUserId
-   * @returns {Promise<object>}
-   */
+
   async markShareAsPaid(accountId, payingUserId) {
     try {
       const updatedShare = await this.prisma.paymentShare.update({
