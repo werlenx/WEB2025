@@ -1,0 +1,30 @@
+.areaPalavra {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 30px 0;
+}
+
+.caixaLetra {
+  width: 40px;
+  height: 40px;
+  background-color: #eee;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #333;
+}
+
+.certa {
+  background-color: #4caf50;
+  color: #fff;
+}
+
+.msgStatus {
+  color: #5e35b1;
+  font-weight: bold;
+  min-height: 20px;
+}

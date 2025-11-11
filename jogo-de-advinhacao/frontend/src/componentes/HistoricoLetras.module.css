@@ -1,0 +1,23 @@
+.hist {
+  margin-top: 20px;
+}
+
+.ttHist {
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.listaHist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.itemHist {
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-weight: bold;
+  color: #333;
+}

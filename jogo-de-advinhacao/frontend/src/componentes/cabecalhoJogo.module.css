@@ -1,0 +1,30 @@
+.linhaTent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.txtTent {
+  color: #555;
+  font-size: 1em;
+  span{
+    font-weight: bold;
+    color: #5e35b1;
+  }
+}
+.logo {
+  width: 100%;
+}
+
+.btnReiniciar {
+  background: none;
+  border: none;
+  color: #5e35b1;
+  font-size: 1.5em;
+  cursor: pointer;
+  span{
+    transform: rotate(-45deg);
+  display: inline-block;
+  }
+}
