@@ -21,7 +21,11 @@ export default function FormularioPalpite({ entrada, setEntrada, onConfirmar }: 
         onChange={(e) => setEntrada(e.target.value)}
         className={estilos.campoInp}
       />
-      <button type="submit" className={estilos.btnConfirma} disabled={!entrada}>
+      <button 
+        type="submit"
+        className={estilos.btnConfirma}
+        disabled={!entrada}
+        >
         Confirmar
       </button>
     </form>
