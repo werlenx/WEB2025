@@ -22,7 +22,8 @@ export default function LoginForm() {
             <div>
                 <div className="bg-white h-screen w-200 lg:rounded-tl-3xl shadow-none flex items-center justify-center"> 
                     
-                    <div className="w-full max-w-xs mx-auto my-auto py-12 px-6 border-black-3000 bg-red-500 rounded-lg"> 
+                    <div className="w-full
+                                    max-w-xs mx-auto my-auto py-12 px-6 border-gray-300 bg-red-50 rounded-lg"> 
 
                         <div className="flex justify-center mb-10">
                             {/* Logo */}
