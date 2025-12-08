@@ -1,22 +1,28 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 
-const BASE_URL = 'http://localhost:3333/';
+const BASE_URL = "http://localhost:3333/";
 
 const getAuthToken = (): string | null => {
-  // ATENÇÃO: Em uma aplicação real Next.js, você faria:
-  // 1. Verificar cookies no Server Side (para segurança)
-  // 2. Usar localStorage no Client Side.
-  // Por enquanto, vamos simular que o token está salvo globalmente:
-  // return localStorage.getItem('authToken'); 
-  return window.localStorage.getItem('authToken');
-};
+  // Evita acesso a `window`/`localStorage` durante Server Side Rendering
+  if (typeof window === "undefined") return null;
 
+  try {
+    return window.localStorage.getItem("authToken");
+  } catch (err) {
+    // Em alguns ambientes (ex.: modos restritos) o acesso pode lançar.
+    console.warn(
+      "Não foi possível acessar localStorage para obter token.",
+      err
+    );
+    return null;
+  }
+};
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 15000, // 15 segundos
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -24,32 +30,35 @@ const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   (config: AxiosRequestConfig) => {
     const token = getAuthToken();
-    
+
     if (token) {
       config.headers = config.headers || {};
-      config.headers['Authorization'] = `Bearer ${token}`;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore -- permitir atribuição direta no header (diversos formatos possíveis)
+      config.headers["Authorization"] = `Bearer ${token}`;
     }
-    
+
     return config;
   },
-  (error) => {
+  (error: any) => {
     return Promise.reject(error);
   }
 );
 
 // 3. Interceptor de Resposta: Trata erros globais, como 401 Unauthorized
 apiClient.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
-            console.error('Sessão expirada ou não autorizada. Redirecionando para login.');
-            // Em uma aplicação real, você forçaria o redirecionamento:
-            // window.location.href = '/login'; 
-        }
-        return Promise.reject(error);
+  (response: any) => response,
+  (error: any) => {
+    if (error.response?.status === 401) {
+      console.error(
+        "Sessão expirada ou não autorizada. Redirecionando para login."
+      );
+      // Em uma aplicação real, você forçaria o redirecionamento:
+      // window.location.href = '/login';
     }
+    return Promise.reject(error);
+  }
 );
-
 
 export default apiClient;
 
@@ -58,9 +67,19 @@ export default apiClient;
  * Em um projeto real, estas estariam no seu AuthContext.
  */
 export const saveToken = (token: string) => {
-    window.localStorage.setItem('authToken', token);
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem("authToken", token);
+  } catch (err) {
+    console.warn("Não foi possível salvar token no localStorage.", err);
+  }
 };
 
 export const clearToken = () => {
-    window.localStorage.removeItem('authToken');
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem("authToken");
+  } catch (err) {
+    console.warn("Não foi possível remover token do localStorage.", err);
+  }
 };
