@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import styles from "/home/ti-3/Documentos/temp/frontteste/src/app.module.css"
+import styles from "./app.module.css"
 
 const CheckCircle = (props) => (
   <svg
