@@ -96,7 +96,11 @@ const App = () => {
   // --- EFEITO: CARREGAMENTO DE DADOS E POLLING ---
   
   const fetchDashboardData = useCallback(async () => {
-      if (!currentUser || !authToken) return;
+      console.log('[DEBUG] fetchDashboardData chamado, currentUser:', currentUser);
+      if (!currentUser || !authToken) {
+          console.log('[DEBUG] Sem currentUser ou authToken, abortando fetch');
+          return;
+      }
       
       try {
           // Carrega dados da casa (inclui membros)
@@ -117,12 +121,14 @@ const App = () => {
                 ...(houseData.members || []),
                 ...(houseData.pendingMembers || [])
              ].map(u => ({
-                 ...u,
+                 id: u.id,
+                 nome: u.name,
+                 email: u.email,
                  papel: u.role === 'ADMIN' ? 'admin' : 'comum',
                  pontuacao: u.score || 0,
                  houseStatus: u.houseStatus ? u.houseStatus.toLowerCase() : 'pending',
                  avatar: u.avatar_color || 'bg-gray-400',
-                 starAvg: u.star_avg,
+                 starAvg: parseFloat(u.star_avg) || 0,
                  houseId: houseData.id
              }));
              
@@ -134,13 +140,17 @@ const App = () => {
           if (currentUser.houseId && currentUser.houseStatus === 'approved') {
               const tasksRes = await api.get('/tasks');
               const mappedTasks = tasksRes.data.map(t => ({
-                  ...t,
+                  id: t.id,
+                  titulo: t.title,
+                  descricao: t.description,
+                  frequencia: t.frequency?.toLowerCase() || 'daily',
+                  pontos: t.points,
                   responsavelId: t.responsible_id,
                   dataLimite: t.due_date,
                   canBuyOut: t.can_buy_out,
-                  starReviews: t.reviews || {}, // TODO: Backend precisa retornar isso se quisermos manter a UI de estrelas detalhada
-                  status: t.status.toLowerCase(),
-                  approvals: {}, // Não parece ser usado no backend da mesma forma
+                  starReviews: {}, // Backend não retorna reviews individuais ainda
+                  status: t.status?.toLowerCase() || 'pending',
+                  approvals: {},
                   starAverage: t.star_average
               }));
               setTasks(mappedTasks);
@@ -160,6 +170,7 @@ const App = () => {
           setHistory(historyRes.data.map(h => ({
               id: h.id,
               usuarioId: h.user?.id,
+              usuarioNome: h.user?.name,  // ✅ Adicionar nome do usuário
               tipoEvento: h.eventType ? h.eventType.toLowerCase() : 'unknown',
               descricao: h.description,
               data: new Date(h.createdAt)
@@ -194,6 +205,9 @@ const App = () => {
           
       } catch (error) {
           console.error("Erro ao buscar dados:", error);
+          if (error.response?.status === 401) {
+             handleLogout();
+          }
       }
   }, [currentUser, authToken]);
 
@@ -210,8 +224,10 @@ const App = () => {
   
   const handleLogin = async (email, senha) => {
     try {
+        console.log('[DEBUG] Iniciando login...');
         const response = await api.post('/auth/login', { email, password: senha });
         const { token, user } = response.data;
+        console.log('[DEBUG] Login bem-sucedido:', user);
 
         localStorage.setItem('authToken', token);
         setAuthToken(token);
@@ -219,22 +235,28 @@ const App = () => {
         // Mapeia os dados do usuário para o formato esperado pelo frontend
         // Adiciona um avatar/cor padrão se não vier do backend (embora o backend tenha avatar_color, o login response pode não ter)
         const mappedUser = {
-            ...user,
+            id: user.id,
+            nome: user.name,  // ✅ CRÍTICO: Mapear name → nome
+            email: user.email,
             papel: user.role === 'ADMIN' ? 'admin' : 'comum', // Backend: ADMIN/COMMON, Frontend: admin/comum
             pontuacao: user.score,
+            houseId: user.houseId,
             houseStatus: user.houseStatus ? user.houseStatus.toLowerCase() : 'unregistered',
             avatar: 'bg-blue-400', // Padrão
+            starAvg: parseFloat(user.starAvg) || 0,
         };
         
         setCurrentUser(mappedUser);
+        console.log('[DEBUG] CurrentUser setado:', mappedUser);
         setNotifiedFailedTaskIds([]);
 
         if (!mappedUser.houseId || mappedUser.houseStatus !== 'approved') {
             setView('houseFlow');
         } else {
+            console.log('[DEBUG] Redirecionando para dashboard');
             setView('dashboard');
         }
-        setModal({ visible: true, title: 'Sucesso', message: `Bem-vindo(a), ${mappedUser.name.split(' ')[0]}!` });
+        setModal({ visible: true, title: 'Sucesso', message: `Bem-vindo(a), ${mappedUser.nome.split(' ')[0]}!` });
 
     } catch (error) {
         console.error("Erro no login:", error);
@@ -769,10 +791,18 @@ const App = () => {
         return;
     }
 
+    // Mapeia frequência de português para inglês
+    const frequencyMap = {
+        'diaria': 'DAILY',
+        'semanal': 'WEEKLY',
+        'mensal': 'MONTHLY'
+    };
+    const frequency = frequencyMap[form.frequencia.value.toLowerCase()] || 'DAILY';
+
     const taskData = {
         title: form.titulo.value, // Backend: title vs Frontend: titulo
         description: form.descricao.value, // Backend: description
-        frequency: form.frequencia.value.toUpperCase(), // Backend: DAILY, WEEKLY, MONTHLY
+        frequency: frequency, // Backend: DAILY, WEEKLY, MONTHLY
         points: Number(form.pontos.value) || 10,
         responsibleId: Number(form.responsavel.value),
         dueDate: dataLimiteISO,
@@ -859,20 +889,17 @@ const App = () => {
       
       const form = e.target;
       const amount = Number(form.amount.value);
-      const type = form.type.value.toUpperCase(); // FIXED / FLOATING
-      // const paidBy = Number(form.paidBy.value); // Backend decide? Não, backend pede? Create Account schema pede apenas name, type, amount, dueDate. E divide igualmente.
-      // O backend NÃO pede quem pagou no Create? Vamos checar o account.route.js
-      // Body: name, type, amount, dueDate.
-      // O backend assume quem pagou? Ou o "paidBy" é apenas para quem pagou ANTECIPADAMENTE (credor)?
-      // Na rota de create, NÃO tem field 'paidBy'. Provavelmente assume que a conta é criada e NINGUÉM pagou ainda, ou o sistema define. 
-      // Mas o frontend tem 'paidBy' (Quem é o Credor).
-      // Se a API não suporta definir o Credor na criação, então isso é uma limitação da integração.
-      // O mock frontend assume que alguém já pagou a conta "para o mundo" e agora os outros devem pagar a ele.
-      // Vou enviar o que a API pede.
+      
+      // Mapeia tipo de conta de português para inglês
+      const typeMap = {
+          'fixa': 'FIXED',
+          'flutuante': 'FLOATING'
+      };
+      const type = typeMap[form.type.value.toLowerCase()] || 'FIXED';
       
       const accountData = {
           name: form.name.value,
-          type: type, // FIXED / FLOATING
+          type: type,
           amount: amount,
           dueDate: form.dueDate.value,
       };
@@ -1226,7 +1253,7 @@ const App = () => {
         <div className={`flex items-start p-4 mb-3 rounded-xl shadow-md transition-all duration-300 ${isConcluida ? 'bg-green-50 opacity-75' : isFailed ? 'bg-red-200 border border-red-400 opacity-70' : isRefazer ? 'bg-orange-200 border border-orange-400' : isAwaitingReview ? 'bg-yellow-50 border border-yellow-300' : isOverdue ? 'bg-red-50 hover:shadow-lg border border-red-200' : 'bg-white hover:shadow-lg hover:border-indigo-200 border border-gray-100'}`}>
             
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0 ${getAvatarBg(task.responsavelId)}`}>
-                {getResponsibleName(task.responsavelId)[0]}
+                {(getResponsibleName(task.responsavelId) || 'User')[0]}
             </div>
 
             <div className="ml-4 flex-1 min-w-0">
@@ -1331,7 +1358,7 @@ const App = () => {
         
     // Lógica da Barra de Descanso (Medidor de Folga)
     const targetPoints = costliestTask ? getBuyOutCost(costliestTask.pontos) : 0;
-    const currentPoints = currentUser.pontuacao;
+    const currentPoints = currentUser?.pontuacao || 0;
     const progress = targetPoints > 0 ? Math.min(100, (currentPoints / targetPoints) * 100) : 0;
 
     return (
@@ -1354,7 +1381,7 @@ const App = () => {
                 <div className="mt-3 text-sm text-gray-600">
                     {targetPoints > 0 ? (
                         <>
-                            <p>Próxima folga (Custo: **{targetPoints} Pts**): **{costliestTask.titulo}**</p>
+                            <p>Próxima folga (Custo: **{targetPoints} Pts**): **{costliestTask?.titulo || 'Tarefa'}**</p>
                             {progress >= 100 && (
                                 <p className="font-bold text-green-700 mt-1">🎉 Você tem pontos suficientes para a folga!</p>
                             )}
@@ -1391,7 +1418,7 @@ const App = () => {
                     {pendente.length > 0 ? (
                         pendente.map(task => <TaskCard key={task.id} task={task} />)
                     ) : (
-                        <p className="p-4 bg-lime-50 rounded-lg text-lime-700 font-medium">Nenhuma tarefa pendente para o filtro "{filterOptions.find(o => o.key === timeFilter).label}"!</p>
+                        <p className="p-4 bg-lime-50 rounded-lg text-lime-700 font-medium">Nenhuma tarefa pendente para o filtro "{filterOptions.find(o => o.key === timeFilter)?.label || 'Filtro'}"!</p>
                     )}
                 </div>
             </section>
@@ -1767,7 +1794,9 @@ const App = () => {
     </div>
   );
 
-  const HistoryView = () => (
+  const HistoryView = () => {
+      console.log('[DEBUG] HistoryView - history.length:', history.length, 'history:', history);
+      return (
     <div className="space-y-3">
         {history.length > 0 ? (
             history.map(item => (
@@ -1786,7 +1815,8 @@ const App = () => {
             <p className="p-4 bg-gray-50 rounded-lg text-gray-500">Nenhum evento registrado ainda.</p>
         )}
     </div>
-  );
+      );
+  };
   const TaskCreationView = () => (
     <div className="p-6 bg-indigo-50 rounded-xl shadow-lg h-fit max-w-2xl mx-auto">
         <h2 className="text-2xl font-bold text-indigo-800 mb-4">Adicionar Nova Tarefa ao Dashboard</h2>
