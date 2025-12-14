@@ -54,4 +54,34 @@ export class UserService {
       throw error;
     }
   }
+  async getProfile(userId) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar_color: true,
+        score: true,
+        star_avg: true,
+        house_id: true,
+        house_status: true,
+        profile: { select: { name: true } },
+      },
+    });
+
+    if (!user) return null;
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatarColor: user.avatar_color,
+      score: user.score,
+      starAvg: user.star_avg ? user.star_avg.toString() : "0.0",
+      houseId: user.house_id,
+      houseStatus: user.house_status,
+      role: user.profile.name,
+    };
+  }
 }

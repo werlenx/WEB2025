@@ -1,9 +1,12 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
+import { HouseService } from "../house/house.service.js";
+
 export class AuthService {
   constructor(prisma) {
     this.prisma = prisma;
+    this.houseService = new HouseService(prisma);
   }
 
   async findUserByEmail(email) {
@@ -16,7 +19,8 @@ export class AuthService {
     });
   }
 
-  async registerUser(name, email, password) {
+  // houseCreationParams: { name: string, code: string }
+  async registerUser(name, email, password, houseCode = null, houseCreationParams = null) {
     const commonProfile = await this.prisma.profile.findUnique({
       where: { name: "COMMON" },
     });
@@ -25,21 +29,64 @@ export class AuthService {
       throw new Error("Profile 'COMMON' not found. Run DB Seed.");
     }
 
+    let houseId = null;
+    let houseStatus = "PENDING";
+    let profileId = commonProfile.id;
+
+    // 1. Join Existing House
+    if (houseCode) {
+        const house = await this.prisma.house.findUnique({
+            where: { code: houseCode.toUpperCase() }
+        });
+        if (!house) {
+            throw new Error(`House with code ${houseCode} not found.`);
+        }
+        houseId = house.id;
+    }
+
     const password_hash = await bcrypt.hash(password, 10);
 
+    // Create User first (temporarily PENDING/COMMON if creating house, updated later)
     const newUser = await this.prisma.user.create({
       data: {
         name,
         email,
         password_hash,
-        profile_id: commonProfile.id,
-        house_status: "PENDING",
+        profile_id: profileId,
+        house_status: houseStatus,
+        house_id: houseId,
         score: 0,
         star_avg: 3.0,
       },
     });
 
-    const { password_hash: _, ...userWithoutHash } = newUser;
+    // 2. Create New House (Atomic-ish)
+    if (houseCreationParams && houseCreationParams.name && houseCreationParams.code) {
+        try {
+            // Create house with user as admin
+            const newHouse = await this.houseService.createHouse(
+                houseCreationParams.name, 
+                newUser.id, 
+                houseCreationParams.code
+            );
+            
+            // user is already updated to ADMIN/APPROVED inside createHouse service method!
+            // But we need to return the fresh user state
+        } catch(error) {
+            // If house creation fails (e.g. code collision), we should probably rollback user creation?
+            // For now, let's delete the user to simulate rollback
+            await this.prisma.user.delete({ where: { id: newUser.id } });
+            throw error;
+        }
+    }
+
+    // Refetch user to get updated fields (if house created)
+    const finalUser = await this.prisma.user.findUnique({
+        where: { id: newUser.id },
+        include: { profile: true, house: true } 
+    });
+
+    const { password_hash: _, ...userWithoutHash } = finalUser;
     return userWithoutHash;
   }
 

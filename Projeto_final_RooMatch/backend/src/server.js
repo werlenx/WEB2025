@@ -35,7 +35,8 @@ async function startServer() {
     try {
       await request.jwtVerify();
     } catch (err) {
-      reply.send(err);
+      // console.error("JWT Verification Error:", err.message); // Uncomment for debug
+      reply.code(401).send({ message: "Unauthorized", error: err.message });
     }
   });
 

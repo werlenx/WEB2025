@@ -9,8 +9,8 @@ export class HouseService {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   }
 
-  async createHouse(houseName, adminId) {
-    const code = this.generateHouseCode();
+  async createHouse(houseName, adminId, customCode = null) {
+    const code = customCode ? customCode.toUpperCase() : this.generateHouseCode();
 
     try {
       const newHouse = await this.prisma.house.create({
@@ -94,28 +94,9 @@ export class HouseService {
     });
   }
 
-  async getHouseDetails(houseId) {
-    return this.prisma.house.findUnique({
-      where: { id: houseId },
-      include: {
-        members: {
-          where: { house_status: "APPROVED" },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            score: true,
-            star_avg: true,
-            avatar_color: true,
-            profile: { select: { name: true } },
-          },
-        },
-      },
-    });
-  }
-
   async getPendingMembers(houseId) {
-    return this.prisma.user.findMany({
+    console.log(`Fetching pending members for house ${houseId}`);
+    const members = await this.prisma.user.findMany({
       where: {
         house_id: houseId,
         house_status: "PENDING",
@@ -126,6 +107,8 @@ export class HouseService {
         email: true,
       },
     });
+    console.log(`Found ${members.length} pending members`);
+    return members;
   }
 
   async updateMemberStatus(userId, houseId, newStatus) {

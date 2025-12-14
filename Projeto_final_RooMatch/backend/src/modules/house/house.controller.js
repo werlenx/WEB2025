@@ -9,32 +9,29 @@ export class HouseController {
   }
 
   async createHouseHandler(request, reply) {
-    const { houseName } = request.body || {};
+    // The previous implementation had some redundant checks that service layer handles or duplicates variables.
+    // Simplifying:
+    const { houseName, code } = request.body || {};
     const userId = request.user && (request.user.id || request.user.sub);
 
     if (!userId) {
       return reply.code(401).send({ message: "Unauthorized" });
     }
 
-    const user = await this.fastify.prisma.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user) return reply.code(404).send({ message: "User not found" });
-    if (user.house_id)
-      return reply
-        .code(400)
-        .send({ message: "User already belongs to a house" });
-
     try {
-      const newHouse = await this.houseService.createHouse(houseName, userId);
-      reply.code(201).send({
-        id: newHouse.id,
-        name: newHouse.name,
-        code: newHouse.code,
-        message: "House created",
-      });
+      const newHouse = await this.houseService.createHouse(houseName, userId, code);
+      reply.code(201).send(newHouse);
     } catch (error) {
       this.fastify.log.error(error);
+      if (error.message.includes("User not found")) {
+        return reply.code(404).send({ message: error.message });
+      }
+      if (error.message.includes("User already belongs to a house")) {
+        return reply.code(400).send({ message: error.message });
+      }
+      if (error.message.includes("House with this code already exists")) {
+        return reply.code(409).send({ message: error.message });
+      }
       reply.code(500).send({ message: "Could not create house" });
     }
   }

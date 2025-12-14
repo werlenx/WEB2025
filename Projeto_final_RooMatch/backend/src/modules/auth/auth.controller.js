@@ -8,7 +8,7 @@ export class AuthController {
   }
 
   async registerHandler(request, reply) {
-    const { name, email, password } = request.body;
+    const { name, email, password, houseCode, houseName, newHouseCode } = request.body;
 
     const existingUser = await this.authService.findUserByEmail(email);
     if (existingUser) {
@@ -17,21 +17,28 @@ export class AuthController {
     }
 
     try {
+      const houseCreationParams = (houseName && newHouseCode) ? { name: houseName, code: newHouseCode } : null;
+
       const newUser = await this.authService.registerUser(
         name,
         email,
-        password
+        password,
+        houseCode,
+        houseCreationParams
       );
 
       reply.code(201).send({
         id: newUser.id,
         name: newUser.name,
         email: newUser.email,
-        message: "Registrado! aguardando aprovação.",
+        message: "Registrado!",
       });
     } catch (error) {
       this.fastify.log.error(error);
-      reply.code(500).send({ message: "erro interno durante o registro" });
+      if (error.message.includes("House with code") && error.message.includes("not found")) {
+          return reply.code(400).send({ message: error.message });
+      }
+      reply.code(500).send({ message: error.message || "erro interno durante o registro" });
     }
   }
 

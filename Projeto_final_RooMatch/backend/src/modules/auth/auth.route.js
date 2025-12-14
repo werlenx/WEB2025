@@ -16,6 +16,9 @@ export async function authRoutes(fastify) {
             name: { type: "string" },
             email: { type: "string", format: "email" },
             password: { type: "string", minLength: 3 },
+            houseCode: { type: "string", minLength: 1 },
+            houseName: { type: "string" },
+            newHouseCode: { type: "string", minLength: 1 },
           },
         },
         response: {
