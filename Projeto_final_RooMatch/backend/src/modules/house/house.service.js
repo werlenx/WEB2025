@@ -95,19 +95,20 @@ export class HouseService {
   }
 
   async getPendingMembers(houseId) {
-    console.log(`Fetching pending members for house ${houseId}`);
+    console.log(`Fetching ALL pending members (Global Visibility)`);
+    // User requested: Any pending member should appear for any house.
     const members = await this.prisma.user.findMany({
       where: {
-        house_id: houseId,
         house_status: "PENDING",
       },
       select: {
         id: true,
         name: true,
         email: true,
+        house_id: true, // metrics
       },
     });
-    console.log(`Found ${members.length} pending members`);
+    console.log(`Found ${members.length} pending members globally`);
     return members;
   }
 
@@ -119,14 +120,32 @@ export class HouseService {
     }
 
     try {
+      // Allow updating ANY user (even if not in house or orphaned)
+      // If Approving, we ADOPT the user into this house (houseId)
+      const updateData = {
+          house_status: newStatus,
+      };
+
+      if (newStatus === "APPROVED") {
+          updateData.house_id = houseId;
+          
+          // Also update profile to COMMON if needed? 
+          // (Usually they are COMMON/PENDING already, but good to ensure)
+      } else if (newStatus === "REJECTED") {
+          // If rejected, uncouple them? Or just leave them rejected?
+          // Usually rejection implies kicking out or denying entry.
+          // Let's keep existing house_id or set to null?
+          // User didn't specify, but safer to keeping current logic or null.
+          // Existing logic just updated status.
+          // For Orphans, house_id is null.
+      }
+
       return this.prisma.user.update({
         where: {
           id: userId,
-          house_id: houseId,
+          // Removed house_id check to allow adopting orphans
         },
-        data: {
-          house_status: newStatus,
-        },
+        data: updateData,
         select: {
           id: true,
           name: true,
@@ -139,7 +158,7 @@ export class HouseService {
         error instanceof PrismaClientKnownRequestError &&
         error.code === "P2025"
       ) {
-        throw new Error("User not found or not a member of your house.");
+        throw new Error("User not found.");
       }
       throw error;
     }

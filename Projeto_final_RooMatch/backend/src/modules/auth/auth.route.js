@@ -1,5 +1,4 @@
 import { AuthController } from "./auth.controller.js";
-
 export async function authRoutes(fastify) {
   const authController = new AuthController(fastify);
 

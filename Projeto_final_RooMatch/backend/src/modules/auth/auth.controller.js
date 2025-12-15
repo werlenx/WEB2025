@@ -9,6 +9,7 @@ export class AuthController {
 
   async registerHandler(request, reply) {
     const { name, email, password, houseCode, houseName, newHouseCode } = request.body;
+    console.log("[AuthController] Register Body:", JSON.stringify(request.body, null, 2));
 
     const existingUser = await this.authService.findUserByEmail(email);
     if (existingUser) {
@@ -36,8 +37,15 @@ export class AuthController {
     } catch (error) {
       this.fastify.log.error(error);
       if (error.message.includes("House with code") && error.message.includes("not found")) {
-          return reply.code(400).send({ message: error.message });
+          return reply.code(404).send({ message: error.message });
       }
+      if (error.message.includes("House code collision")) {
+          return reply.code(409).send({ message: error.message });
+      }
+      if (error.message.includes("Email ja cadastrado")) { // Service might throw this or Prisma
+           return reply.code(409).send({ message: error.message });
+      }
+      
       reply.code(500).send({ message: error.message || "erro interno durante o registro" });
     }
   }

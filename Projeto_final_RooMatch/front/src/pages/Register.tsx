@@ -30,8 +30,13 @@ export default function Register() {
     e.preventDefault();
     setError("");
     try {
+      console.log("Submitting Register:", { mode, houseCode, houseName, newHouseCode }); // Debug Log
       if (mode === "join") {
-        await register(nome, email, senha, houseCode || undefined);
+        if (!houseCode || !houseCode.trim()) {
+            setError("Por favor, informe o código da casa.");
+            return;
+        }
+        await register(nome, email, senha, houseCode.trim()); // Remove undefined/optional logic for now to force it
       } else {
         await register(nome, email, senha, undefined, { 
             name: houseName, 
@@ -119,12 +124,12 @@ export default function Register() {
                             type="text"
                             placeholder="Código da Casa (Ex: AB1234)"
                             value={houseCode}
-                            onChange={(e) => setHouseCode(e.target.value.toUpperCase().trim())}
+                            onChange={(e) => setHouseCode(e.target.value.toUpperCase())}
                             className="w-full p-3 border border-indigo-200 bg-indigo-50 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-mono text-indigo-700"
+                            required={mode === "join"}
                         />
-                         <span className="absolute right-3 top-3 text-xs text-indigo-400 font-medium px-1">Opcional</span>
                     </div>
-                    <p className="text-xs text-gray-400">Se não tiver um código agora, você pode entrar depois.</p>
+                    <p className="text-xs text-gray-400">Insira o código compartilhado pelo administrador da casa.</p>
                 </div>
             )}
 

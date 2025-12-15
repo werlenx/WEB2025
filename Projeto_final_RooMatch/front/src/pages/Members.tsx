@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Star } from "../ui/Icos";
 import api from "../services/api";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, Trash2 } from "lucide-react";
 
 export default function Members() {
   const { user } = useAuth();
@@ -46,6 +46,24 @@ export default function Members() {
       } catch (error) {
           console.error("Erro ao atualizar status", error);
           alert("Erro ao atualizar status do membro.");
+      }
+  };
+
+  const handleRemoveMember = async (memberId: number, memberName: string) => {
+      if (!window.confirm(`Tem certeza que deseja remover ${memberName} da casa?`)) {
+          return;
+      }
+
+      try {
+          await api.delete(`/house/members/${memberId}`);
+          setHouse((prev: any) => {
+              if (!prev) return prev;
+              const newMembers = prev.members.filter((m: any) => m.id !== memberId);
+              return { ...prev, members: newMembers };
+          });
+      } catch (error) {
+          console.error("Erro ao remover membro", error);
+          alert("Erro ao remover membro.");
       }
   };
 
@@ -149,15 +167,26 @@ export default function Members() {
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-2xl font-bold text-indigo-600">
-                    {u.score || 0} Pts
-                  </span>
-                  <span className="text-sm font-semibold text-gray-500 mt-1 flex items-center">
-                    {Number(u.star_avg || 3.0).toFixed(1)}{" "}
-                    <Star className="w-4 h-4 ml-0.5 text-yellow-500 fill-yellow-500" />
-                  </span>
-                </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="text-right">
+                        <span className="text-2xl font-bold text-indigo-600 block">
+                            {u.score || 0} Pts
+                        </span>
+                        <span className="text-sm font-semibold text-gray-500 flex items-center justify-end">
+                            {Number(u.star_avg || 3.0).toFixed(1)}{" "}
+                            <Star className="w-4 h-4 ml-0.5 text-yellow-500 fill-yellow-500" />
+                        </span>
+                    </div>
+                     {isUserAdmin && u.id !== user?.id && (
+                        <button
+                            onClick={() => handleRemoveMember(u.id, u.name)}
+                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
+                            title="Remover da casa"
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </button>
+                    )}
+                  </div>
               </div>
             );
           })}

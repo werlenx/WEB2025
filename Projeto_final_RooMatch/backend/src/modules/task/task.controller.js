@@ -192,4 +192,24 @@ export class TaskController {
       reply.code(500).send({ message: "Could not process task review." });
     }
   }
+
+  async deleteTaskHandler(request, reply) {
+    const { taskId } = request.params;
+    const houseId = request.user && request.user.houseId;
+
+    if (!houseId) {
+      return reply.code(400).send({ message: "User must belong to a house." });
+    }
+
+    try {
+      await this.taskService.deleteTask(parseInt(taskId), houseId);
+      reply.code(200).send({ message: "Task deleted successfully." });
+    } catch (error) {
+      this.fastify.log.error(error);
+      if (error.message.includes("Task not found")) {
+        return reply.code(404).send({ message: error.message });
+      }
+      reply.code(500).send({ message: "Could not delete task." });
+    }
+  }
 }

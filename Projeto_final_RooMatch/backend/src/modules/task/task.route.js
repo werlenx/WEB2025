@@ -216,4 +216,27 @@ export async function taskRoutes(fastify) {
     },
     taskController.reviewTaskHandler.bind(taskController)
   );
+
+  fastify.delete(
+    "/:taskId",
+    {
+      schema: {
+        tags: ["Tasks"],
+        summary: "Exclui uma tarefa da casa.",
+        security: [{ apiKey: [] }],
+        params: {
+          type: "object",
+          properties: {
+            taskId: { type: "number", description: "ID da tarefa a ser excluída." },
+          },
+        },
+        response: {
+          200: { type: "object", properties: { message: { type: "string" } } },
+          400: { type: "object", properties: { message: { type: "string" } } },
+          404: { type: "object", properties: { message: { type: "string" } } },
+        },
+      },
+    },
+    taskController.deleteTaskHandler.bind(taskController)
+  );
 }

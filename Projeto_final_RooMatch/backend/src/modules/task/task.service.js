@@ -164,5 +164,32 @@ export class TaskService {
       return updatedTask;
     });
   }
-  P;
+
+  async deleteTask(taskId, houseId) {
+    try {
+      // First check if task exists and belongs to house
+      const task = await this.prisma.task.findUnique({
+        where: { id: taskId },
+      });
+
+      if (!task || task.house_id !== houseId) {
+        throw new Error("Task not found or does not belong to your house.");
+      }
+
+      await this.prisma.task.delete({
+        where: { id: taskId },
+      });
+
+      return { message: "Task deleted successfully" };
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        throw new Error("Task not found.");
+      }
+      throw error;
+    }
+  }
 }
+

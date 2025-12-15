@@ -21,6 +21,7 @@ export class AuthService {
 
   // houseCreationParams: { name: string, code: string }
   async registerUser(name, email, password, houseCode = null, houseCreationParams = null) {
+    console.log(`[AuthService] registerUser called with houseCode: '${houseCode}'`);
     const commonProfile = await this.prisma.profile.findUnique({
       where: { name: "COMMON" },
     });
@@ -39,8 +40,10 @@ export class AuthService {
             where: { code: houseCode.toUpperCase() }
         });
         if (!house) {
+            console.warn(`[AuthService] House with code ${houseCode} not found.`);
             throw new Error(`House with code ${houseCode} not found.`);
         }
+        console.log(`[AuthService] Joining existing house: ${house.name} (ID: ${house.id})`);
         houseId = house.id;
     }
 
